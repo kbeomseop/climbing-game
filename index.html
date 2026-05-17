@@ -12,7 +12,7 @@
       video  { display: none; }
 
       .fab-bar {
-        position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+        position: fixed; bottom: 24px; left: 16px;
         display: flex; gap: 10px; z-index: 10;
       }
       .fab {
@@ -45,7 +45,7 @@
     <video id="webcam" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
     <div class="fab-bar">
-      <button class="fab fab-edit" data-tip="편집" onclick="location.href='/editor.html'">✏️</button>
+      <button class="fab fab-edit" data-tip="편집" onclick="location.href='./editor.html'">✏️</button>
     </div>
     <script type="module" src="/src/main.js"></script>
   </body>
