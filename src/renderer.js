@@ -75,7 +75,7 @@ export class Renderer {
   }
 
   // ── 홀드 렌더링 ──────────────────────────────────────────
-  drawHolds(holds, lHold, rHold) {
+  drawHolds(holds, lHold, rHold, hoverHold = null) {
     const ctx = this.ctx;
     const sy  = this.scrollY;
 
@@ -93,7 +93,8 @@ export class Renderer {
         const rotation = h.rotation ?? 0;
 
         ctx.save();
-        if (gripped) { ctx.shadowBlur = 32; ctx.shadowColor = "rgba(144,202,249,0.7)"; }
+        if (gripped)                       { ctx.shadowBlur = 32; ctx.shadowColor = "rgba(144,202,249,0.7)"; }
+        else if (hoverHold?.id === h.id)   { ctx.shadowBlur = 48; ctx.shadowColor = "rgba(255,255,160,0.95)"; }
         if (img.complete && img.naturalWidth > 0) {
           const dw = img.naturalWidth  * 0.2 * scale;
           const dh = img.naturalHeight * 0.2 * scale;
@@ -147,8 +148,8 @@ export class Renderer {
       const outerR = gripped ? 22 : 17;
       const innerR = gripped ? 9  : 6;
       ctx.save();
-      ctx.shadowBlur  = gripped ? 32 : 18;
-      ctx.shadowColor = glow;
+      ctx.shadowBlur  = gripped ? 32 : (hoverHold?.id === h.id ? 48 : 18);
+      ctx.shadowColor = (!gripped && hoverHold?.id === h.id) ? "rgba(255,255,160,0.95)" : glow;
       ctx.beginPath();
       ctx.arc(h.x, screenY, outerR, 0, Math.PI * 2);
       ctx.strokeStyle = color;
@@ -377,6 +378,30 @@ export class Renderer {
     ctx.restore(); // 카메라 translate 해제
   }
 
+  // ── 마우스 모드 커서 ──────────────────────────────────────
+  drawMouseCursors({ mouseMode, mouse, activeKey, lastKey }) {
+    if (!mouseMode) return;
+    const ctx    = this.ctx;
+    const isLeft = (activeKey ?? lastKey) === 'a';
+    const color  = isLeft ? "rgba(80,210,255,0.9)" : "rgba(255,165,80,0.9)";
+    const bright = !!activeKey;
+
+    ctx.save();
+    ctx.globalAlpha = bright ? 0.9 : 0.35;
+    ctx.shadowBlur  = bright ? 24 : 8;
+    ctx.shadowColor = color;
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 2.5;
+    ctx.beginPath();
+    ctx.arc(mouse.x, mouse.y, 18, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(mouse.x, mouse.y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.restore();
+  }
+
   // ── 손 랜드마크 (뷰포트 좌표, scrollY 불필요) ─────────────
   drawHandLandmarks(hands) {
     const ctx = this.ctx;
@@ -414,28 +439,53 @@ export class Renderer {
       ctx.restore();
       return;
     }
-    if (state.noCam) {
+    if (state.noCam && !state.mouseMode) {
       ctx.font      = "600 15px 'Poppins', sans-serif";
       ctx.fillStyle = "rgba(255,200,50,0.92)";
       ctx.fillText("📷 카메라 없음 — 편집 모드만 가능", 24, 36);
       ctx.restore();
       return;
     }
-    // 타이틀
+
+    // 타이틀 (항상)
     ctx.font      = "700 18px 'Poppins', sans-serif";
     ctx.fillStyle = "#fff";
     ctx.fillText("🧗 Climbing", 24, 36);
-    // 홀드 상태
-    ctx.font = "400 12px 'Poppins', sans-serif";
-    if (state.lHold) {
+
+    if (state.mouseMode) {
+      // 마우스 모드 표시
+      ctx.font      = "600 13px 'Poppins', sans-serif";
       ctx.fillStyle = "rgba(80,210,255,0.85)";
-      ctx.fillText(`L: Hold #${state.lHold.id} (${state.lHold.type})`, 24, 62);
+      ctx.fillText("🖱 마우스 모드", 24, 58);
+      // 홀드 상태
+      ctx.font = "400 12px 'Poppins', sans-serif";
+      if (state.lHold) {
+        ctx.fillStyle = "rgba(80,210,255,0.85)";
+        ctx.fillText(`L: Hold #${state.lHold.id} (${state.lHold.type})`, 24, 80);
+      }
+      if (state.rHold) {
+        ctx.fillStyle = "rgba(255,165,80,0.85)";
+        ctx.fillText(`R: Hold #${state.rHold.id} (${state.rHold.type})`, 24, 98);
+      }
+      // 하단 힌트
+      ctx.font      = "400 12px 'Poppins', sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.3)";
+      ctx.textAlign = "center";
+      ctx.fillText("A = 왼손  |  D = 오른손  |  클릭 = 확정", this.canvas.width / 2, this.canvas.height - 28);
+    } else {
+      // 카메라 모드 홀드 상태
+      ctx.font = "400 12px 'Poppins', sans-serif";
+      if (state.lHold) {
+        ctx.fillStyle = "rgba(80,210,255,0.85)";
+        ctx.fillText(`L: Hold #${state.lHold.id} (${state.lHold.type})`, 24, 62);
+      }
+      if (state.rHold) {
+        ctx.fillStyle = "rgba(255,165,80,0.85)";
+        ctx.fillText(`R: Hold #${state.rHold.id} (${state.rHold.type})`, 24, 80);
+      }
     }
-    if (state.rHold) {
-      ctx.fillStyle = "rgba(255,165,80,0.85)";
-      ctx.fillText(`R: Hold #${state.rHold.id} (${state.rHold.type})`, 24, 80);
-    }
-    // SUMMIT
+
+    // SUMMIT (공통)
     if (state.lHold?.type === "top" || state.rHold?.type === "top") {
       ctx.font      = "700 36px 'Poppins', sans-serif";
       ctx.fillStyle = "#ff9f43";
