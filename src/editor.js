@@ -36,11 +36,31 @@ const wrap    = document.getElementById("canvas-wrap");
 const palette = document.getElementById("palette");
 
 // ── 이미지 캐시 ─────────────────────────────────────────────
-const imgCache = {};
+const imgCache      = {};
+let imgLoadedCount  = 0;
+const imgTotal      = HOLD_TYPES.length;
+
 for (const ht of HOLD_TYPES) {
-  const img = new Image();
-  img.src = `/holds/${ht.img}`;
-  imgCache[ht.img] = img;
+  const filename = ht.img;
+  const paths    = [`/holds/${filename}`, `./holds/${filename}`];
+  let   pi       = 0;
+  const img      = new Image();
+
+  img.onload = () => {
+    imgCache[filename] = img;
+    imgLoadedCount++;
+  };
+  img.onerror = () => {
+    console.warn(`[imgCache] 경로 실패: ${img.src}`);
+    pi++;
+    if (pi < paths.length) {
+      img.src = paths[pi];
+    } else {
+      console.error(`[imgCache] 모든 경로 실패: ${filename}`);
+      imgLoadedCount++;
+    }
+  };
+  img.src = paths[pi];
 }
 
 // ── 상태 ────────────────────────────────────────────────────
@@ -317,8 +337,13 @@ function drawHold(h) {
     const dh = img.naturalHeight * 0.2 * scale;
     ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
   } else {
+    // 로딩 중: 점선 원 / 실패: 빨간 점선 원
     ctx.beginPath(); ctx.arc(0, 0, 18 * scale, 0, Math.PI * 2);
-    ctx.fillStyle = "#42a5f5"; ctx.fill();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = imgLoadedCount < imgTotal ? "rgba(100,180,255,0.5)" : "#e53935";
+    ctx.lineWidth   = 2;
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
   ctx.restore();
 
