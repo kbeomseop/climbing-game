@@ -1,3 +1,21 @@
+function drawTypePill(ctx, x, y, type) {
+  const isStart = type === "start";
+  const bg   = isStart ? "#00d2a0" : "#ff9f43";
+  const fg   = isStart ? "#003d2e" : "#3d2000";
+  const text = isStart ? "START"   : "TOP";
+  ctx.save();
+  ctx.font = "700 10px 'Poppins', sans-serif";
+  const tw = ctx.measureText(text).width;
+  const bw = tw + 16; const bh = 18;
+  ctx.beginPath();
+  ctx.roundRect(x - bw / 2, y - bh / 2, bw, bh, 999);
+  ctx.fillStyle = bg; ctx.fill();
+  ctx.fillStyle = fg;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
 const HOLD_TYPES = [
   { img: "hold1_banana.png", label: "Banana" },
   { img: "hold2_mid.png",    label: "Mid"    },
@@ -253,11 +271,15 @@ canvas.addEventListener("contextmenu", e => {
 document.getElementById("btn-save").addEventListener("click", () => {
   localStorage.setItem("climbingRoute", JSON.stringify(placedHolds));
   const btn = document.getElementById("btn-save");
-  btn.textContent = "저장됨!";
-  setTimeout(() => { btn.textContent = "저장"; }, 1200);
+  btn.textContent = "✅";
+  setTimeout(() => { btn.textContent = "💾"; }, 1200);
 });
 document.getElementById("btn-play").addEventListener("click", () => {
   window.location.href = "/";
+});
+document.getElementById("btn-reset").addEventListener("click", () => {
+  placedHolds = []; nextId = 0; selectedHold = null;
+  wrap.scrollTop = wrap.scrollHeight;
 });
 document.getElementById("btn-new").addEventListener("click", () => {
   placedHolds = []; nextId = 0; selectedHold = null;
@@ -300,7 +322,7 @@ function drawHold(h) {
   }
   ctx.restore();
 
-  // 타입 링 + 라벨
+  // 타입 링 + 필 뱃지
   const tc = TYPE_COLOR[h.type];
   if (tc) {
     ctx.save();
@@ -308,13 +330,8 @@ function drawHold(h) {
     ctx.strokeStyle = tc; ctx.lineWidth = 2;
     ctx.shadowBlur  = 10; ctx.shadowColor = tc;
     ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.font        = "10px monospace";
-    ctx.fillStyle   = "rgba(255,255,255,0.85)";
-    ctx.textAlign   = "center";
-    ctx.textBaseline = "bottom";
-    ctx.fillText(h.type.toUpperCase(), h.x, h.y - SEL_R - 6);
     ctx.restore();
+    drawTypePill(ctx, h.x, h.y - SEL_R - 14, h.type);
   }
 
   // 선택 상태: 점선 원 + 인라인 컨트롤

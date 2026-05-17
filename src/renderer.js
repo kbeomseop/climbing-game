@@ -52,6 +52,28 @@ export class Renderer {
     ctx.restore();
   }
 
+  // ── START / TOP 필 뱃지 ─────────────────────────────────
+  _drawTypePill(x, y, type) {
+    const ctx = this.ctx;
+    const isStart = type === "start";
+    const bg   = isStart ? "#00d2a0" : "#ff9f43";
+    const fg   = isStart ? "#003d2e" : "#3d2000";
+    const text = isStart ? "START"   : "TOP";
+    ctx.save();
+    ctx.font = "700 10px 'Poppins', sans-serif";
+    const tw = ctx.measureText(text).width;
+    const bw = tw + 16; const bh = 18;
+    ctx.beginPath();
+    ctx.roundRect(x - bw / 2, y - bh / 2, bw, bh, 999);
+    ctx.fillStyle = bg;
+    ctx.fill();
+    ctx.fillStyle = fg;
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
   // ── 홀드 렌더링 ──────────────────────────────────────────
   drawHolds(holds, lHold, rHold) {
     const ctx = this.ctx;
@@ -87,7 +109,7 @@ export class Renderer {
         }
         ctx.restore();
 
-        // 타입 링 + 라벨
+        // 타입 링 + 필 뱃지
         if (typeColor) {
           ctx.save();
           ctx.beginPath();
@@ -98,13 +120,7 @@ export class Renderer {
           ctx.shadowColor = typeColor;
           ctx.stroke();
           ctx.restore();
-          ctx.save();
-          ctx.font         = "bold 10px monospace";
-          ctx.fillStyle    = typeColor;
-          ctx.textAlign    = "center";
-          ctx.textBaseline = "bottom";
-          ctx.fillText(h.type.toUpperCase(), h.x, screenY - 36);
-          ctx.restore();
+          this._drawTypePill(h.x, screenY - 46, h.type);
         }
 
         // 그립 링
@@ -145,13 +161,7 @@ export class Renderer {
       ctx.restore();
 
       if (typeColor) {
-        ctx.save();
-        ctx.font         = "bold 10px monospace";
-        ctx.fillStyle    = typeColor;
-        ctx.textAlign    = "center";
-        ctx.textBaseline = "bottom";
-        ctx.fillText(h.type.toUpperCase(), h.x, screenY - outerR - 4);
-        ctx.restore();
+        this._drawTypePill(h.x, screenY - outerR - 14, h.type);
       }
     }
   }
@@ -398,33 +408,37 @@ export class Renderer {
     const ctx = this.ctx;
     ctx.save();
     if (!state.ready) {
+      ctx.font      = "700 22px 'Poppins', sans-serif";
       ctx.fillStyle = "rgba(255,255,255,0.85)";
-      ctx.font = "bold 22px monospace";
-      ctx.fillText("MediaPipe 로딩 중...", 24, 44);
+      ctx.fillText("로딩 중...", 24, 44);
       ctx.restore();
       return;
     }
     if (state.noCam) {
+      ctx.font      = "600 15px 'Poppins', sans-serif";
       ctx.fillStyle = "rgba(255,200,50,0.92)";
-      ctx.font = "bold 15px monospace";
-      ctx.fillText("📷 카메라 없음 — 편집 모드만 가능", 24, 30);
+      ctx.fillText("📷 카메라 없음 — 편집 모드만 가능", 24, 36);
       ctx.restore();
       return;
     }
-    ctx.fillStyle = "rgba(255,255,255,0.45)";
-    ctx.font = "13px monospace";
-    ctx.fillText("CLIMBING GAME  ·  손을 홀드에 가져다 대세요", 24, 30);
+    // 타이틀
+    ctx.font      = "700 18px 'Poppins', sans-serif";
+    ctx.fillStyle = "#fff";
+    ctx.fillText("🧗 Climbing", 24, 36);
+    // 홀드 상태
+    ctx.font = "400 12px 'Poppins', sans-serif";
     if (state.lHold) {
-      ctx.fillStyle = "rgba(80,210,255,0.75)";
-      ctx.fillText(`L: Hold #${state.lHold.id} (${state.lHold.type})`, 24, 54);
+      ctx.fillStyle = "rgba(80,210,255,0.85)";
+      ctx.fillText(`L: Hold #${state.lHold.id} (${state.lHold.type})`, 24, 62);
     }
     if (state.rHold) {
-      ctx.fillStyle = "rgba(255,165,80,0.75)";
-      ctx.fillText(`R: Hold #${state.rHold.id} (${state.rHold.type})`, 24, 72);
+      ctx.fillStyle = "rgba(255,165,80,0.85)";
+      ctx.fillText(`R: Hold #${state.rHold.id} (${state.rHold.type})`, 24, 80);
     }
+    // SUMMIT
     if (state.lHold?.type === "top" || state.rHold?.type === "top") {
-      ctx.fillStyle = "#ff6d00";
-      ctx.font = "bold 36px monospace";
+      ctx.font      = "700 36px 'Poppins', sans-serif";
+      ctx.fillStyle = "#ff9f43";
       ctx.textAlign = "center";
       ctx.fillText("🏆 SUMMIT!", this.canvas.width / 2, this.canvas.height / 2);
     }

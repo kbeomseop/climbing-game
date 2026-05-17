@@ -4,119 +4,106 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Route Editor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body {
-        background: #0a0a14;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        font-family: monospace;
-        color: #fff;
+        background: #0a0a14; overflow: hidden;
+        display: flex; flex-direction: column; height: 100vh;
+        font-family: 'Poppins', sans-serif; color: #fff;
       }
 
       /* ── 상단 바 ── */
       #topbar {
-        height: 52px;
+        height: 56px;
         background: rgba(255,255,255,0.04);
         border-bottom: 1px solid rgba(255,255,255,0.08);
-        display: flex;
-        align-items: center;
-        padding: 0 12px;
-        gap: 6px;
-        flex-shrink: 0;
+        display: flex; align-items: center;
+        padding: 0 16px; gap: 8px; flex-shrink: 0;
       }
       #topbar h1 {
-        font-size: 12px;
-        letter-spacing: 2px;
-        color: rgba(255,255,255,0.3);
-        margin-right: 8px;
-        white-space: nowrap;
+        font-family: 'Poppins', sans-serif;
+        font-size: 18px; font-weight: 700;
+        color: #fff; margin-right: 12px; white-space: nowrap;
       }
 
-      /* 팔레트 (상단 가로 나열) */
-      #palette {
-        display: flex;
-        gap: 4px;
-        align-items: center;
-      }
+      /* 팔레트 */
+      #palette { display: flex; gap: 4px; align-items: center; }
       .palette-item {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 1px;
-        padding: 3px 5px 2px;
-        border: 1.5px solid transparent;
-        border-radius: 6px;
-        cursor: pointer;
-        user-select: none;
+        display: flex; flex-direction: column; align-items: center; gap: 1px;
+        padding: 4px 6px 3px;
+        border: 2px solid transparent; border-radius: 8px;
+        cursor: pointer; user-select: none;
         transition: border-color 0.12s, background 0.12s;
       }
-      .palette-item:hover { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.06); }
-      .palette-item.selected { border-color: #42a5f5; background: rgba(66,165,245,0.15); }
-      .palette-item img { width: 40px; height: 40px; object-fit: contain; display: block; }
-      .palette-item span { font-size: 9px; color: rgba(255,255,255,0.4); }
+      .palette-item:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); }
+      .palette-item.selected { border-color: #ff9f43; background: rgba(255,159,67,0.12); }
+      .palette-item img { width: 38px; height: 38px; object-fit: contain; display: block; }
+      .palette-item span { font-size: 9px; font-family: 'Poppins', sans-serif; color: rgba(255,255,255,0.45); }
 
       .sep { width: 1px; height: 28px; background: rgba(255,255,255,0.1); margin: 0 4px; flex-shrink: 0; }
       .spacer { flex: 1; }
 
-      button {
-        background: rgba(255,255,255,0.07);
-        border: 1px solid rgba(255,255,255,0.18);
-        color: #fff;
-        padding: 6px 14px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-family: monospace;
-        font-size: 13px;
-        transition: background 0.15s;
-        white-space: nowrap;
-        flex-shrink: 0;
-      }
-      button:hover { background: rgba(255,255,255,0.14); }
-      #btn-save { background: rgba(66,165,245,0.25); border-color: rgba(66,165,245,0.6); }
-      #btn-save:hover { background: rgba(66,165,245,0.45); }
-      #btn-new  { background: rgba(255,80,80,0.15); border-color: rgba(255,80,80,0.4); }
-      #btn-new:hover  { background: rgba(255,80,80,0.35); }
-
       /* ── 캔버스 영역 ── */
       #canvas-wrap {
-        flex: 1;
-        position: relative;
-        overflow-y: auto;
-        overflow-x: hidden;
+        flex: 1; position: relative; overflow-y: auto; overflow-x: hidden;
       }
       #canvas-wrap::-webkit-scrollbar { width: 6px; }
       #canvas-wrap::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
       #canvas-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
-
       canvas { position: absolute; top: 0; left: 0; display: block; }
 
+      /* ── 하단 플로팅 버튼 ── */
+      .fab-bar {
+        position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+        display: flex; gap: 10px; z-index: 10;
+      }
+      .fab {
+        width: 48px; height: 48px; border-radius: 999px;
+        font-size: 1.2rem; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Poppins', sans-serif; font-weight: 700;
+        position: relative; transition: transform 0.1s;
+        border: none;
+      }
+      .fab:active { transform: translateY(2px); }
+      .fab-save  { background: #ff9f43; color: #fff; box-shadow: 0 3px 0 #c97a1e; }
+      .fab-play  { background: #ee5a24; color: #fff; box-shadow: 0 3px 0 #a83410; }
+      .fab-reset { background: #1e1e2e; color: #aaa; border: 1.5px solid #444; }
+      .fab-new   { background: #1e1e2e; color: #aaa; border: 1.5px solid #444; }
+      .fab::after {
+        content: attr(data-tip);
+        position: absolute; bottom: calc(100% + 8px);
+        left: 50%; transform: translateX(-50%);
+        background: rgba(0,0,0,0.8); color: #fff;
+        font-size: 11px; font-family: 'Poppins', sans-serif; font-weight: 400;
+        padding: 4px 10px; border-radius: 8px; white-space: nowrap;
+        pointer-events: none; opacity: 0; transition: opacity 0.15s;
+      }
+      .fab:hover::after { opacity: 1; }
+
       #hint {
-        position: fixed;
-        bottom: 12px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 11px;
-        color: rgba(255,255,255,0.2);
-        pointer-events: none;
-        white-space: nowrap;
+        position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%);
+        font-size: 11px; font-family: 'Poppins', sans-serif;
+        color: rgba(255,255,255,0.18); pointer-events: none; white-space: nowrap;
       }
     </style>
   </head>
   <body>
     <div id="topbar">
-      <h1>ROUTE EDITOR</h1>
-      <div id="palette"></div>
+      <h1>🧗 Route Editor</h1>
       <div class="sep"></div>
+      <div id="palette"></div>
       <div class="spacer"></div>
-      <button id="btn-new">새 문제</button>
-      <button id="btn-save">저장</button>
-      <button id="btn-play">게임 시작</button>
     </div>
     <div id="canvas-wrap">
       <canvas id="canvas"></canvas>
+    </div>
+    <div class="fab-bar">
+      <button class="fab fab-save"  id="btn-save"  data-tip="저장">💾</button>
+      <button class="fab fab-play"  id="btn-play"  data-tip="게임 시작">▶</button>
+      <button class="fab fab-reset" id="btn-reset" data-tip="초기화">🗑</button>
+      <button class="fab fab-new"   id="btn-new"   data-tip="새 문제">＋</button>
     </div>
     <div id="hint">클릭: 배치 &nbsp;·&nbsp; 홀드 클릭: 선택 &nbsp;·&nbsp; 우클릭: 삭제</div>
     <script type="module" src="/src/editor.js"></script>

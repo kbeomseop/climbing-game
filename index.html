@@ -3,25 +3,50 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hand Tracking Climbing Game</title>
+    <title>Climbing Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { background: #0a0a14; overflow: hidden; }
+      body { background: #0a0a14; overflow: hidden; font-family: 'Poppins', sans-serif; }
       canvas { display: block; }
-      video { display: none; }
+      video  { display: none; }
+
+      .fab-bar {
+        position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+        display: flex; gap: 10px; z-index: 10;
+      }
+      .fab {
+        width: 48px; height: 48px; border-radius: 999px;
+        font-size: 1.25rem; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Poppins', sans-serif; font-weight: 700;
+        position: relative; transition: transform 0.1s, opacity 0.15s;
+        border: none;
+      }
+      .fab:active { transform: translateY(2px); }
+      .fab-edit {
+        background: #1e1e2e; color: #ff9f43;
+        border: 2px solid #ff9f43;
+      }
+      .fab-edit:hover { opacity: 0.85; }
+      .fab::after {
+        content: attr(data-tip);
+        position: absolute; bottom: calc(100% + 8px);
+        left: 50%; transform: translateX(-50%);
+        background: rgba(0,0,0,0.8); color: #fff;
+        font-size: 11px; font-family: 'Poppins', sans-serif; font-weight: 400;
+        padding: 4px 10px; border-radius: 8px; white-space: nowrap;
+        pointer-events: none; opacity: 0; transition: opacity 0.15s;
+      }
+      .fab:hover::after { opacity: 1; }
     </style>
   </head>
   <body>
     <video id="webcam" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
-    <a href="/editor.html" style="
-      position:fixed; left:16px; bottom:16px;
-      background:rgba(0,0,0,0.55); border:1px solid rgba(255,255,255,0.2);
-      color:#fff; text-decoration:none; font:13px monospace;
-      padding:7px 14px; border-radius:6px; backdrop-filter:blur(4px);
-      transition:background 0.15s;
-    " onmouseover="this.style.background='rgba(255,255,255,0.12)'"
-       onmouseout="this.style.background='rgba(0,0,0,0.55)'">✏️ 편집</a>
+    <div class="fab-bar">
+      <button class="fab fab-edit" data-tip="편집" onclick="location.href='/editor.html'">✏️</button>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
