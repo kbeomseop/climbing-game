@@ -29,6 +29,7 @@ const BTN_W        = 38;
 const BTN_H        = 20;
 const BTN_GAP      = 4;
 const TYPE_COLOR   = { start: "#00e676", top: "#ff6d00" };
+const BTN_COLOR    = { start: "#00d2a0", top: "#ff9f43" };
 
 const canvas  = document.getElementById("canvas");
 const ctx     = canvas.getContext("2d");
@@ -114,7 +115,7 @@ const paletteEls = HOLD_TYPES.map((ht, i) => {
 
 // ── 컨트롤 핸들 위치 (캔버스 절대좌표) ─────────────────────
 const ctrlRot    = h => ({ x: h.x,      y: h.y - 68 });   // 상단 – 회전
-const ctrlScale  = h => ({ x: h.x + 62, y: h.y + 12 });   // 우측 – 크기
+const ctrlScale  = h => ({ x: h.x + 48, y: h.y + 48 });   // 우하단 대각선 – 크기
 const ctrlDelete = h => ({ x: h.x + 50, y: h.y - 50 });   // 우상단 – 삭제
 
 // ── 타입 버튼 레이아웃 ───────────────────────────────────────
@@ -364,7 +365,7 @@ function drawHold(h) {
     ctx.save();
     ctx.setLineDash([7, 4]);
     ctx.beginPath(); ctx.arc(h.x, h.y, SEL_R, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(255,159,67,0.6)"; ctx.lineWidth = 1.5;
     ctx.stroke(); ctx.setLineDash([]);
     ctx.restore();
     drawControls(h);
@@ -393,34 +394,34 @@ function drawControls(h) {
   const rp = ctrlRot(h);
   ctx.save();
   ctx.beginPath(); ctx.moveTo(h.x, h.y - SEL_R); ctx.lineTo(rp.x, rp.y + 12);
-  ctx.strokeStyle = "rgba(255,255,255,0.18)"; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle = "rgba(255,159,67,0.25)"; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
   ctx.restore();
-  drawHandle(rp, 12, "↻", "rgba(25,25,45,0.85)", "rgba(255,255,255,0.5)");
+  drawHandle(rp, 12, "↻", "#ff9f43", "#c97a1e");
 
-  // 크기 핸들 (우측)
+  // 크기 핸들 (우하단 대각선)
   const sp = ctrlScale(h);
   ctx.save();
-  ctx.beginPath(); ctx.moveTo(h.x + SEL_R, h.y); ctx.lineTo(sp.x - 12, sp.y);
-  ctx.strokeStyle = "rgba(255,255,255,0.18)"; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(h.x + SEL_R * 0.7, h.y + SEL_R * 0.7); ctx.lineTo(sp.x - 8, sp.y - 8);
+  ctx.strokeStyle = "rgba(255,159,67,0.25)"; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
   ctx.restore();
-  drawHandle(sp, 11, "⇔", "rgba(25,25,45,0.85)", "rgba(255,255,255,0.5)");
+  drawHandle(sp, 11, "⤡", "#ee5a24", "#a83410");
 
   // 삭제 버튼 (우상단)
-  drawHandle(ctrlDelete(h), 11, "×", "rgba(190,45,45,0.85)", "rgba(255,100,100,0.6)");
+  drawHandle(ctrlDelete(h), 11, "×", "#c0392b", "#e74c3c");
 
   // 타입 버튼 (하단)
   for (const btn of getTypeBtnRects(h)) {
-    const active = h.type === btn.type;
-    const bc     = TYPE_COLOR[btn.type] ?? null;
+    const active   = h.type === btn.type;
+    const btnColor = BTN_COLOR[btn.type] ?? null;
     ctx.save();
     ctx.beginPath();
     ctx.roundRect(btn.x, btn.y, btn.w, btn.bh, 4);
-    ctx.fillStyle   = active ? (bc ? bc + "30" : "rgba(255,255,255,0.14)") : "rgba(15,15,30,0.78)";
-    ctx.strokeStyle = active ? (bc ?? "rgba(255,255,255,0.6)") : "rgba(255,255,255,0.17)";
+    ctx.fillStyle   = active ? (btnColor ? btnColor + "30" : "rgba(255,255,255,0.2)") : "rgba(15,15,30,0.85)";
+    ctx.strokeStyle = active ? (btnColor ?? "rgba(255,255,255,0.4)")                  : "rgba(255,255,255,0.15)";
     ctx.lineWidth   = active ? 1.5 : 1;
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle    = active ? (bc ?? "#fff") : "rgba(255,255,255,0.5)";
-    ctx.font         = "10px monospace";
+    ctx.fillStyle    = active ? (btnColor ?? "#fff") : "rgba(255,255,255,0.5)";
+    ctx.font         = "700 10px 'Poppins', sans-serif";
     ctx.textAlign    = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(btn.label, btn.x + btn.w / 2, btn.y + btn.bh / 2);

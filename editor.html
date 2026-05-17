@@ -38,7 +38,10 @@
       }
       .palette-item:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); }
       .palette-item.selected { border-color: #ff9f43; background: rgba(255,159,67,0.12); }
-      .palette-item img { width: 38px; height: 38px; object-fit: contain; display: block; }
+      .palette-item img {
+        width: 44px; height: 44px; object-fit: contain; display: block;
+        background: rgba(255,255,255,0.04); border-radius: 6px; padding: 2px;
+      }
       .palette-item span { font-size: 9px; font-family: 'Poppins', sans-serif; color: rgba(255,255,255,0.45); }
 
       .sep { width: 1px; height: 28px; background: rgba(255,255,255,0.1); margin: 0 4px; flex-shrink: 0; }
@@ -71,6 +74,8 @@
       .fab-play  { background: #ee5a24; color: #fff; box-shadow: 0 3px 0 #a83410; }
       .fab-reset { background: #1e1e2e; color: #aaa; border: 1.5px solid #444; }
       .fab-new   { background: #1e1e2e; color: #aaa; border: 1.5px solid #444; }
+      .fab-home  { background: #1e1e2e; color: #ff9f43; border: 2px solid #ff9f43;
+                   position: fixed; left: 16px; bottom: 24px; }
       .fab::after {
         content: attr(data-tip);
         position: absolute; bottom: calc(100% + 8px);
@@ -105,6 +110,7 @@
       <button class="fab fab-reset" id="btn-reset" data-tip="초기화">🗑</button>
       <button class="fab fab-new"   id="btn-new"   data-tip="새 문제">＋</button>
     </div>
+    <button class="fab fab-home" data-tip="게임으로" onclick="window.location.href='./'">🏠</button>
     <div id="hint">클릭: 배치 &nbsp;·&nbsp; 홀드 클릭: 선택 &nbsp;·&nbsp; 우클릭: 삭제</div>
     <script type="module" src="/src/editor.js"></script>
   </body>
