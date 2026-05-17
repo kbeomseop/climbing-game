@@ -14,6 +14,7 @@ let holds        = [];
 let climbingState = null;
 let startHolds   = [];
 let ready        = false;
+let noCam        = false;
 
 // ── 월드 높이 (뷰포트 × 2.5) ─────────────────────────────
 let WORLD_H = window.innerHeight * 2.5;
@@ -38,7 +39,14 @@ async function initWebcam() {
 }
 
 async function init() {
-  await Promise.all([tracker.init(), initWebcam()]);
+  const [trackerResult, camResult] = await Promise.allSettled([tracker.init(), initWebcam()]);
+  if (camResult.status === "rejected") {
+    noCam = true;
+    console.warn("카메라 없음 모드:", camResult.reason);
+  }
+  if (trackerResult.status === "rejected") {
+    console.warn("HandTracker 초기화 실패:", trackerResult.reason);
+  }
   buildHolds();
   ready = true;
 }
@@ -67,7 +75,7 @@ function loop() {
     return;
   }
 
-  tracker.detect(video);
+  if (!noCam) tracker.detect(video);
   const hands = tracker.getHands(canvas.width, canvas.height);
   climbingState.update(hands, canvas.width, cameraY);
 
@@ -105,17 +113,9 @@ function loop() {
   renderer.drawHolds(holds, lh, rh);
   renderer.drawCharacter(pose);
   renderer.drawHandLandmarks(hands);
-  renderer.drawUI({ ready, lHold: lh, rHold: rh, startHolds });
+  renderer.drawUI({ ready, lHold: lh, rHold: rh, startHolds, noCam });
 }
 
 requestAnimationFrame(loop);
 
-init().catch(err => {
-  console.error(err);
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#0a0a14";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "rgba(255,80,80,0.9)";
-  ctx.font = "bold 18px monospace";
-  ctx.fillText(`오류: ${err.message}`, 24, 60);
-});
+init();

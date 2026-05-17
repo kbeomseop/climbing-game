@@ -404,6 +404,13 @@ export class Renderer {
       ctx.restore();
       return;
     }
+    if (state.noCam) {
+      ctx.fillStyle = "rgba(255,200,50,0.92)";
+      ctx.font = "bold 15px monospace";
+      ctx.fillText("📷 카메라 없음 — 편집 모드만 가능", 24, 30);
+      ctx.restore();
+      return;
+    }
     ctx.fillStyle = "rgba(255,255,255,0.45)";
     ctx.font = "13px monospace";
     ctx.fillText("CLIMBING GAME  ·  손을 홀드에 가져다 대세요", 24, 30);
