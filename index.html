@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hand Tracking Climbing Game</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { background: #0a0a14; overflow: hidden; }
+      canvas { display: block; }
+      video { display: none; }
+    </style>
+  </head>
+  <body>
+    <video id="webcam" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+    <a href="/editor.html" style="
+      position:fixed; left:16px; bottom:16px;
+      background:rgba(0,0,0,0.55); border:1px solid rgba(255,255,255,0.2);
+      color:#fff; text-decoration:none; font:13px monospace;
+      padding:7px 14px; border-radius:6px; backdrop-filter:blur(4px);
+      transition:background 0.15s;
+    " onmouseover="this.style.background='rgba(255,255,255,0.12)'"
+       onmouseout="this.style.background='rgba(0,0,0,0.55)'">✏️ 편집</a>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
