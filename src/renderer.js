@@ -132,7 +132,7 @@ export class Renderer {
 
         // 타입 링
         if (typeColor) {
-          const typeR     = Math.max(dw, dh) / 2 + 10;
+          const typeR     = Math.max(dw, dh) / 2 + 12;
           const ringColor = h.type === "start" ? "#00d2a0" : "#ff9f43";
           ctx.save();
           ctx.beginPath();
@@ -143,7 +143,7 @@ export class Renderer {
           ctx.save();
           ctx.font = "700 10px 'Poppins', sans-serif";
           ctx.fillStyle = ringColor; ctx.textAlign = "center"; ctx.textBaseline = "top";
-          ctx.fillText(h.type === "start" ? "START" : "TOP", h.x, h.y + typeR + 4);
+          ctx.fillText(h.type === "start" ? "START" : "TOP", h.x, h.y + typeR + 12);
           ctx.restore();
         }
 
@@ -180,7 +180,7 @@ export class Renderer {
       ctx.restore();
 
       if (typeColor) {
-        const typeR     = outerR + 10;
+        const typeR     = outerR + 12;
         const ringColor = h.type === "start" ? "#00d2a0" : "#ff9f43";
         ctx.save();
         ctx.beginPath();
@@ -191,7 +191,7 @@ export class Renderer {
         ctx.save();
         ctx.font = "700 10px 'Poppins', sans-serif";
         ctx.fillStyle = ringColor; ctx.textAlign = "center"; ctx.textBaseline = "top";
-        ctx.fillText(h.type === "start" ? "START" : "TOP", h.x, h.y + typeR + 4);
+        ctx.fillText(h.type === "start" ? "START" : "TOP", h.x, h.y + typeR + 12);
         ctx.restore();
       }
     }

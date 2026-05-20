@@ -523,16 +523,23 @@ function drawHold(h) {
   }
   ctx.restore();
 
-  // 타입 링 + 필 뱃지
-  const tc = TYPE_COLOR[h.type];
-  if (tc) {
+  // 타입 링 + 텍스트 (동적 반지름)
+  if (h.type === "start" || h.type === "top") {
+    const ringColor = h.type === "start" ? "#00d2a0" : "#ff9f43";
+    const imgLoaded = img && img.complete && img.naturalWidth > 0;
+    const iW = imgLoaded ? img.naturalWidth  * 0.2 * scale : 36 * scale;
+    const iH = imgLoaded ? img.naturalHeight * 0.2 * scale : 36 * scale;
+    const typeR = Math.max(iW, iH) / 2 + 12;
     ctx.save();
-    ctx.beginPath(); ctx.arc(h.x, h.y, SEL_R - 6, 0, Math.PI * 2);
-    ctx.strokeStyle = tc; ctx.lineWidth = 2;
-    ctx.shadowBlur  = 10; ctx.shadowColor = tc;
-    ctx.stroke();
+    ctx.beginPath(); ctx.arc(h.x, h.y, typeR, 0, Math.PI * 2);
+    ctx.strokeStyle = ringColor; ctx.lineWidth = 2.5;
+    ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
     ctx.restore();
-    drawTypePill(ctx, h.x, h.y - SEL_R - 14, h.type);
+    ctx.save();
+    ctx.font = "700 10px 'Poppins', sans-serif";
+    ctx.fillStyle = ringColor; ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillText(h.type === "start" ? "START" : "TOP", h.x, h.y + typeR + 12);
+    ctx.restore();
   }
 
   // 선택 상태: 점선 원 + 인라인 컨트롤
