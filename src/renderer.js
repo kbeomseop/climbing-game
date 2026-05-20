@@ -89,13 +89,14 @@ export class Renderer {
   }
 
   // ── 홀드 렌더링 ──────────────────────────────────────────
-  drawHolds(holds, lHold, rHold, hoverHold = null) {
+  drawHolds(holds, lHold, rHold, hoverHold = null, scrollY = 0) {
     const ctx = this.ctx;
-    const sy  = this.scrollY;
+    ctx.save();
+    ctx.translate(0, -scrollY);
 
     for (const h of holds) {
       const gripped   = lHold?.id === h.id || rHold?.id === h.id;
-      const screenY   = h.y - sy;
+      const screenY   = h.y;
       const typeColor = h.type === "start" ? "#00e676"
                       : h.type === "top"   ? "#ff6d00"
                       : null;
@@ -206,6 +207,7 @@ export class Renderer {
         ctx.restore();
       }
     }
+    ctx.restore();
   }
 
   // ── 모션 감지 ────────────────────────────────────────────
@@ -219,7 +221,7 @@ export class Renderer {
   }
 
   // ── 캐릭터 렌더링 ─────────────────────────────────────────
-  drawCharacter(pose, { lHold = null, rHold = null } = {}) {
+  drawCharacter(pose, { lHold = null, rHold = null } = {}, scrollY = 0) {
     if (!pose) return;
     const ctx = this.ctx;
 
@@ -228,7 +230,7 @@ export class Renderer {
     else if (lHold || rHold) state = 'climb';
 
     ctx.save();
-    ctx.translate(0, -this.scrollY);
+    ctx.translate(0, -scrollY);
 
     if (this._monkeyReady[state]) {
       const W = 100, H = 130;
@@ -455,7 +457,7 @@ export class Renderer {
   }
 
   // ── 손 랜드마크 (뷰포트 좌표, scrollY 불필요) ─────────────
-  drawHandLandmarks(hands) {
+  drawHandLandmarks(hands, scrollY = 0) {
     const ctx = this.ctx;
     for (const hand of hands) {
       const pts = hand.landmarks;

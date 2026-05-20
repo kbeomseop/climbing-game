@@ -20,16 +20,16 @@ let mouseMode     = false;
 // ── 월드 높이 (뷰포트 × 2.5) ─────────────────────────────
 let WORLD_H = window.innerHeight * 2.5;
 
-// ── 카메라Y ──────────────────────────────────────────────
-let cameraY       = WORLD_H - window.innerHeight;
-let targetCameraY = cameraY;
+// ── 스크롤 ───────────────────────────────────────────────
+let scrollY       = 0;
+let targetScrollY = 0;
 
-// ── 마우스 모드 상태 (스크린 좌표) ───────────────────────
+// ── 마우스 모드 상태 ──────────────────────────────────────
 const mouse   = { x: 0, y: 0 };
-let activeKey = null;      // 'a' | 'd' | null
-let lastKey   = 'a';       // 마지막으로 누른 키
-let leftPos   = null;      // 왼손 월드 좌표 { x, y }
-let rightPos  = null;      // 오른손 월드 좌표 { x, y }
+let activeKey = null;
+let lastKey   = 'a';
+let leftPos   = null;
+let rightPos  = null;
 
 function syncMouseBtn() {
   const btnMouse  = document.getElementById('btn-mouse');
@@ -81,13 +81,13 @@ async function init() {
 
 // ── 스크롤 모드 ───────────────────────────────────────────
 let scrollMode     = localStorage.getItem("routeScrollMode") || "follow";
-let scrollOverride = null;   // "follow" 모드에서 휠 시 임시 "free"
+let scrollOverride = null;
 let wheelTimer     = null;
 
 window.addEventListener("wheel", e => {
   e.preventDefault();
-  targetCameraY += e.deltaY * 0.8;
-  targetCameraY = Math.max(0, Math.min(targetCameraY, WORLD_H - window.innerHeight));
+  targetScrollY += e.deltaY * 0.8;
+  targetScrollY = Math.max(0, targetScrollY);
   if (scrollMode === "follow") {
     scrollOverride = "free";
     clearTimeout(wheelTimer);
@@ -97,8 +97,8 @@ window.addEventListener("wheel", e => {
 
 window.addEventListener("resize", () => {
   WORLD_H = window.innerHeight * 2.5;
-  targetCameraY = Math.max(0, Math.min(targetCameraY, WORLD_H - window.innerHeight));
-  cameraY = targetCameraY;
+  targetScrollY = Math.max(0, targetScrollY);
+  scrollY = targetScrollY;
   if (ready) buildHolds();
 });
 
@@ -107,9 +107,8 @@ canvas.addEventListener("mousemove", e => {
   const rect = canvas.getBoundingClientRect();
   mouse.x = e.clientX - rect.left;
   mouse.y = e.clientY - rect.top;
-  // 월드 좌표로 저장 (카메라 스크롤 독립적)
-  if (activeKey === 'a') leftPos  = { x: mouse.x, y: mouse.y + cameraY };
-  if (activeKey === 'd') rightPos = { x: mouse.x, y: mouse.y + cameraY };
+  if (activeKey === 'a') leftPos  = { x: mouse.x, y: mouse.y + scrollY };
+  if (activeKey === 'd') rightPos = { x: mouse.x, y: mouse.y + scrollY };
 });
 
 window.addEventListener("keydown", e => {
@@ -118,8 +117,8 @@ window.addEventListener("keydown", e => {
   if (k !== 'a' && k !== 'd') return;
   activeKey = k;
   lastKey   = k;
-  if (k === 'a') leftPos  = { x: mouse.x, y: mouse.y + cameraY };
-  else           rightPos = { x: mouse.x, y: mouse.y + cameraY };
+  if (k === 'a') leftPos  = { x: mouse.x, y: mouse.y + scrollY };
+  else           rightPos = { x: mouse.x, y: mouse.y + scrollY };
 });
 
 window.addEventListener("keyup", e => {
@@ -130,7 +129,7 @@ canvas.addEventListener("click", e => {
   if (!mouseMode || !ready) return;
   const rect = canvas.getBoundingClientRect();
   const sx   = e.clientX - rect.left;
-  const wy   = (e.clientY - rect.top) + cameraY;
+  const wy   = (e.clientY - rect.top) + scrollY;
   const isLeft = lastKey === 'a';
 
   let nearest = null, nd = Infinity;
@@ -148,10 +147,9 @@ canvas.addEventListener("click", e => {
 function loop() {
   requestAnimationFrame(loop);
 
-  renderer.scrollY = cameraY;
-  renderer.clear();
-
   if (!ready) {
+    renderer.scrollY = scrollY;
+    renderer.clear();
     renderer.drawUI({ ready: false });
     return;
   }
@@ -161,7 +159,7 @@ function loop() {
   if (!mouseMode) {
     tracker.detect(video);
     hands = tracker.getHands(canvas.width, canvas.height);
-    climbingState.update(hands, canvas.width, cameraY);
+    climbingState.update(hands, canvas.width, scrollY);
   }
 
   const lh = climbingState.leftHold;
@@ -188,21 +186,25 @@ function loop() {
 
   // ── 카메라 팔로우 ──
   const effectiveMode = scrollOverride ?? scrollMode;
-  if (effectiveMode === "follow" && pose) {
-    const shoulderY       = (pose.lShoulder.y + pose.rShoulder.y) / 2;
-    const shoulderScreenY = shoulderY - cameraY;
-    if (shoulderScreenY > window.innerHeight * 0.65) {
-      targetCameraY = Math.max(0, shoulderY - window.innerHeight * 0.70);
+  if (effectiveMode === "fixed") {
+    scrollY = 0;
+    targetScrollY = 0;
+  } else {
+    if (effectiveMode === "follow" && pose) {
+      targetScrollY = Math.max(0, pose.head.y - window.innerHeight * 0.35);
     }
+    scrollY += (targetScrollY - scrollY) * 0.08;
+    scrollY = Math.max(0, scrollY);
   }
-  cameraY += (targetCameraY - cameraY) * 0.12;
-  cameraY  = Math.max(0, Math.min(cameraY, WORLD_H - window.innerHeight));
-  renderer.scrollY = cameraY;
+
+  // ── 렌더링 ──
+  renderer.scrollY = scrollY;
+  renderer.clear();
 
   // ── 마우스 근처 홀드 하이라이트 ──
   let hoverHold = null;
   if (mouseMode) {
-    const wy = mouse.y + cameraY;
+    const wy = mouse.y + scrollY;
     let nd = Infinity;
     for (const h of holds) {
       const d = Math.hypot(mouse.x - h.x, wy - h.y);
@@ -210,9 +212,9 @@ function loop() {
     }
   }
 
-  renderer.drawHolds(holds, lh, rh, hoverHold);
-  renderer.drawCharacter(pose, { lHold: lh, rHold: rh });
-  if (hands.length > 0) renderer.drawHandLandmarks(hands);
+  renderer.drawHolds(holds, lh, rh, hoverHold, scrollY);
+  renderer.drawCharacter(pose, { lHold: lh, rHold: rh }, scrollY);
+  if (hands.length > 0) renderer.drawHandLandmarks(hands, scrollY);
   renderer.drawMouseCursors({ mouseMode, mouse, activeKey, lastKey });
   renderer.drawUI({ ready, lHold: lh, rHold: rh, startHolds, noCam, mouseMode });
 }
