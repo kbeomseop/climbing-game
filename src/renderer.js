@@ -18,9 +18,9 @@ export class Renderer {
     this._monkeyImgs  = {};
     this._monkeyReady = {};
     for (const [k, src] of [
-      ['idle',  '/monkey/monkey_idle.svg'],
-      ['climb', '/monkey/monkey_climb.svg'],
-      ['top',   '/monkey/monkey_top.svg'],
+      ['idle',  './monkey/monkey_idle.svg'],
+      ['climb', './monkey/monkey_climb.svg'],
+      ['top',   './monkey/monkey_top.svg'],
     ]) {
       const img = new Image();
       img.onload = () => { this._monkeyReady[k] = true; };
@@ -35,7 +35,7 @@ export class Renderer {
   _getImg(name) {
     if (!this.imgCache[name]) {
       const img = new Image();
-      img.src = `/holds/${name}`;
+      img.src = `./holds/${name}`;
       this.imgCache[name] = img;
     }
     return this.imgCache[name];
@@ -104,7 +104,7 @@ export class Renderer {
         // 이미지 홀드 — 지연 로딩
         if (!this.imgCache[h.img]) {
           const _i = new Image();
-          _i.src = `/holds/${h.img}`;
+          _i.src = `./holds/${h.img}`;
           this.imgCache[h.img] = _i;
         }
         const img      = this.imgCache[h.img];

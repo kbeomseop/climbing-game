@@ -43,7 +43,7 @@ const imgTotal      = HOLD_TYPES.length;
 
 for (const ht of HOLD_TYPES) {
   const filename = ht.img;
-  const paths    = [`/holds/${filename}`, `./holds/${filename}`];
+  const paths    = [`./holds/${filename}`];
   let   pi       = 0;
   const img      = new Image();
 
@@ -122,7 +122,7 @@ setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 0);
 const paletteEls = HOLD_TYPES.map((ht, i) => {
   const el = document.createElement("div");
   el.className = "palette-item";
-  el.innerHTML = `<img src="/holds/${ht.img}" alt="${ht.label}"><span>${ht.label}</span>`;
+  el.innerHTML = `<img src="./holds/${ht.img}" alt="${ht.label}"><span>${ht.label}</span>`;
   el.addEventListener("click", () => {
     selectedPaletteIdx = (selectedPaletteIdx === i) ? null : i;
     paletteEls.forEach((e, j) => e.classList.toggle("selected", j === selectedPaletteIdx));

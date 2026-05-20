@@ -4,8 +4,8 @@ import { fileURLToPath } from 'url'
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
-export default defineConfig({
-  base: '/climbing-game/',
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/climbing-game/' : '/',
   build: {
     rollupOptions: {
       input: {
@@ -14,4 +14,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))
