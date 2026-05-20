@@ -32,13 +32,20 @@ let leftPos   = null;      // 왼손 월드 좌표 { x, y }
 let rightPos  = null;      // 오른손 월드 좌표 { x, y }
 
 function syncMouseBtn() {
-  const btn = document.getElementById('btn-mouse');
-  if (btn) btn.classList.toggle('active', mouseMode);
+  const btnMouse  = document.getElementById('btn-mouse');
+  const btnMotion = document.getElementById('btn-motion');
+  if (btnMouse)  btnMouse.classList.toggle('active',  mouseMode);
+  if (btnMotion) btnMotion.classList.toggle('active', !mouseMode);
 }
 
 window.toggleMouseMode = () => {
-  mouseMode = !mouseMode;
-  if (!mouseMode) { leftPos = null; rightPos = null; }
+  mouseMode = true;
+  leftPos = null; rightPos = null;
+  syncMouseBtn();
+};
+
+window.toggleMotionMode = () => {
+  mouseMode = false;
   syncMouseBtn();
 };
 

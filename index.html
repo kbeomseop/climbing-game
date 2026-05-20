@@ -44,7 +44,8 @@
     <video id="webcam" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
     <div class="tab-bar">
-      <button id="btn-mouse" class="tab-btn" data-tip="마우스 모드" onclick="window.toggleMouseMode()">🖱</button>
+      <button id="btn-motion" class="tab-btn active" data-tip="모션 감지" onclick="window.toggleMotionMode()">✋</button>
+      <button id="btn-mouse"  class="tab-btn"        data-tip="마우스 모드" onclick="window.toggleMouseMode()">🖱</button>
       <button class="tab-btn" data-tip="편집" onclick="location.href='./editor.html'">✏️</button>
     </div>
     <script type="module" src="/src/main.js"></script>
