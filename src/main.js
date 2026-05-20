@@ -301,7 +301,7 @@ function loop() {
   } else {
     if (effectiveMode === "follow" && pose) {
       const charY = pose.neck.y;
-      targetScrollY = Math.max(0, charY - window.innerHeight * 0.75);
+      targetScrollY = Math.max(0, charY - window.innerHeight * 0.85);
     }
     scrollY += (targetScrollY - scrollY) * 0.15;
     scrollY = Math.max(0, scrollY);
