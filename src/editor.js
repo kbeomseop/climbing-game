@@ -98,6 +98,11 @@ setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 0);
         placedHolds    = route.holds.map(h => ({ scale: 1, rotation: 0, ...h }));
         nextId         = Math.max(...placedHolds.map(h => h.id)) + 1;
         currentRouteId = route.id;
+        if (route.scrollMode) {
+          const sm = document.getElementById("scroll-mode");
+          if (sm) sm.value = route.scrollMode;
+          localStorage.setItem("routeScrollMode", route.scrollMode);
+        }
         loaded = true;
       }
     } catch {}
@@ -331,11 +336,124 @@ function showSaveModal(placeholder, onConfirm) {
 }
 
 // ── 버튼 ────────────────────────────────────────────────────
+// ── 사이드바 렌더 ────────────────────────────────────────────
+function renderSidebar() {
+  const list = document.getElementById("sidebar-list");
+  if (!list) return;
+  const routes = JSON.parse(localStorage.getItem("climbingRoutes") || "[]");
+  if (routes.length === 0) {
+    list.innerHTML = '<div id="sidebar-empty">저장된 루트가 없습니다</div>';
+    return;
+  }
+  list.innerHTML = "";
+  for (const route of [...routes].reverse()) {
+    const date = new Date(route.createdAt).toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
+    const item = document.createElement("div");
+    item.className = "sidebar-route" + (route.id === currentRouteId ? " active" : "");
+
+    const nameEl  = document.createElement("div");
+    nameEl.className = "sidebar-route-name";
+    nameEl.textContent = route.name;
+
+    const dateEl  = document.createElement("div");
+    dateEl.className = "sidebar-route-date";
+    dateEl.textContent = date;
+
+    const actions = document.createElement("div");
+    actions.className = "sidebar-route-actions";
+
+    const btnRename = document.createElement("button");
+    btnRename.className = "btn-rename"; btnRename.title = "이름 수정"; btnRename.textContent = "✏️";
+
+    const btnDelete = document.createElement("button");
+    btnDelete.className = "btn-delete"; btnDelete.title = "삭제"; btnDelete.textContent = "🗑";
+
+    actions.append(btnRename, btnDelete);
+    item.append(nameEl, dateEl, actions);
+
+    // 이름 인라인 수정
+    btnRename.addEventListener("click", e => {
+      e.stopPropagation();
+      const input = document.createElement("input");
+      input.type = "text"; input.value = route.name;
+      input.style.cssText = "background:#0a0a14;color:#fff;border:1px solid #ff9f43;border-radius:6px;padding:2px 6px;font-family:'Poppins',sans-serif;font-size:12px;width:100%;outline:none;";
+      nameEl.replaceWith(input);
+      input.focus(); input.select();
+      const save = () => {
+        const newName = input.value.trim() || route.name;
+        const rs = JSON.parse(localStorage.getItem("climbingRoutes") || "[]");
+        const idx = rs.findIndex(r => r.id === route.id);
+        if (idx >= 0) { rs[idx].name = newName; localStorage.setItem("climbingRoutes", JSON.stringify(rs)); }
+        renderSidebar();
+      };
+      input.addEventListener("blur", save);
+      input.addEventListener("keydown", ev => {
+        if (ev.key === "Enter")  { ev.preventDefault(); input.blur(); }
+        if (ev.key === "Escape") { input.value = route.name; input.blur(); }
+      });
+    });
+
+    // 슬라이드아웃 삭제
+    btnDelete.addEventListener("click", e => {
+      e.stopPropagation();
+      item.classList.add("removing");
+      setTimeout(() => {
+        const rs = JSON.parse(localStorage.getItem("climbingRoutes") || "[]");
+        localStorage.setItem("climbingRoutes", JSON.stringify(rs.filter(r => r.id !== route.id)));
+        if (currentRouteId === route.id) {
+          currentRouteId = null; placedHolds = []; nextId = 0; selectedHold = null;
+          localStorage.removeItem("lastRouteId");
+        }
+        renderSidebar();
+      }, 200);
+    });
+
+    // 루트 로드
+    item.addEventListener("click", () => {
+      const holds2 = route.holds ?? [];
+      placedHolds    = holds2.map(h => ({ scale: 1, rotation: 0, ...h }));
+      nextId         = placedHolds.length > 0 ? Math.max(...placedHolds.map(h => h.id)) + 1 : 0;
+      selectedHold   = null;
+      currentRouteId = route.id;
+      localStorage.setItem("climbingRoute", JSON.stringify(holds2));
+      localStorage.setItem("lastRouteId",   route.id);
+      if (route.scrollMode) {
+        localStorage.setItem("routeScrollMode", route.scrollMode);
+        const sm = document.getElementById("scroll-mode");
+        if (sm) sm.value = route.scrollMode;
+      }
+      renderSidebar();
+    });
+
+    list.appendChild(item);
+  }
+}
+
+// scroll-mode 드롭다운 변경 시 현재 루트에 반영
+document.getElementById("scroll-mode").addEventListener("change", e => {
+  const mode = e.target.value;
+  localStorage.setItem("routeScrollMode", mode);
+  if (currentRouteId) {
+    const rs  = JSON.parse(localStorage.getItem("climbingRoutes") || "[]");
+    const idx = rs.findIndex(r => r.id === currentRouteId);
+    if (idx >= 0) { rs[idx].scrollMode = mode; localStorage.setItem("climbingRoutes", JSON.stringify(rs)); }
+  }
+});
+
+// 사이드바 새 루트 버튼
+document.getElementById("btn-sidebar-new").addEventListener("click", () => {
+  placedHolds = []; nextId = 0; selectedHold = null; currentRouteId = null;
+  localStorage.removeItem("lastRouteId");
+  renderSidebar();
+  wrap.scrollTop = wrap.scrollHeight;
+});
+
+// ── 버튼 ────────────────────────────────────────────────────
 document.getElementById("btn-save").addEventListener("click", () => {
   const routes = JSON.parse(localStorage.getItem("climbingRoutes") || "[]");
   const n      = routes.filter(r => r.id !== currentRouteId).length + 1;
   showSaveModal(`Project ${n}`, name => {
-    const id  = currentRouteId || `route_${Date.now()}`;
+    const id    = currentRouteId || `route_${Date.now()}`;
     const route = {
       id, name,
       createdAt: Date.now(),
@@ -348,6 +466,7 @@ document.getElementById("btn-save").addEventListener("click", () => {
     localStorage.setItem("climbingRoute",  JSON.stringify(placedHolds));
     localStorage.setItem("lastRouteId",    id);
     currentRouteId = id;
+    renderSidebar();
   });
 });
 document.getElementById("btn-play").addEventListener("click", () => {
@@ -355,12 +474,13 @@ document.getElementById("btn-play").addEventListener("click", () => {
 });
 document.getElementById("btn-reset").addEventListener("click", () => {
   placedHolds = []; nextId = 0; selectedHold = null; currentRouteId = null;
+  localStorage.removeItem("lastRouteId");
+  renderSidebar();
   wrap.scrollTop = wrap.scrollHeight;
 });
-document.getElementById("btn-new").addEventListener("click", () => {
-  placedHolds = []; nextId = 0; selectedHold = null; currentRouteId = null;
-  wrap.scrollTop = wrap.scrollHeight;
-});
+
+// 초기 사이드바 렌더
+renderSidebar();
 
 // ── 렌더링 ──────────────────────────────────────────────────
 function drawGrid() {
