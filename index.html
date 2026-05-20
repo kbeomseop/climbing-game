@@ -38,6 +38,39 @@
         pointer-events: none; opacity: 0; transition: opacity 0.15s;
       }
       .tab-btn:hover::after { opacity: 1; }
+
+      /* 루트 패널 */
+      #route-panel {
+        position: fixed; left: 72px; top: 50%; transform: translateY(-50%);
+        background: rgba(15,15,30,0.96); border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px; padding: 16px; min-width: 220px; max-height: 60vh;
+        overflow-y: auto; z-index: 99; display: none; flex-direction: column; gap: 8px;
+      }
+      #route-panel.open { display: flex; }
+      #route-panel h3 {
+        font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.5);
+        margin: 0 0 4px; text-transform: uppercase; letter-spacing: 0.05em;
+      }
+      .route-item {
+        display: flex; align-items: center; gap: 8px;
+        padding: 10px 12px; border-radius: 10px; cursor: pointer;
+        border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.03);
+        transition: background 0.12s, border-color 0.12s;
+      }
+      .route-item:hover { background: rgba(255,159,67,0.1); border-color: rgba(255,159,67,0.3); }
+      .route-item.active { background: rgba(255,159,67,0.15); border-color: #ff9f43; }
+      .route-item-name { flex: 1; font-size: 13px; font-weight: 600; color: #fff; }
+      .route-item-date { font-size: 10px; color: rgba(255,255,255,0.35); }
+      .route-item-del {
+        width: 24px; height: 24px; border-radius: 6px; border: none;
+        background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.4);
+        cursor: pointer; font-size: 14px; display: flex; align-items: center;
+        justify-content: center; transition: background 0.12s, color 0.12s;
+      }
+      .route-item-del:hover { background: rgba(231,76,60,0.2); color: #e74c3c; }
+      #route-panel-empty {
+        font-size: 12px; color: rgba(255,255,255,0.25); text-align: center; padding: 8px 0;
+      }
     </style>
   </head>
   <body>
@@ -46,7 +79,12 @@
     <div class="tab-bar">
       <button id="btn-motion" class="tab-btn active" data-tip="모션 감지" onclick="window.toggleMotionMode()">✋</button>
       <button id="btn-mouse"  class="tab-btn"        data-tip="마우스 모드" onclick="window.toggleMouseMode()">🖱</button>
+      <button id="btn-routes" class="tab-btn"        data-tip="루트 선택"  onclick="window.toggleRoutePanel()">📋</button>
       <button class="tab-btn" data-tip="편집" onclick="location.href='./editor.html'">✏️</button>
+    </div>
+    <div id="route-panel">
+      <h3>루트 선택</h3>
+      <div id="route-list"></div>
     </div>
     <script type="module" src="/src/main.js"></script>
   </body>

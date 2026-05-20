@@ -31,6 +31,9 @@ let lastKey   = 'a';
 let leftPos   = null;
 let rightPos  = null;
 
+// ── 현재 루트 ID ─────────────────────────────────────────
+let currentRouteId = null;
+
 function syncMouseBtn() {
   const btnMouse  = document.getElementById('btn-mouse');
   const btnMotion = document.getElementById('btn-motion');
@@ -48,6 +51,109 @@ window.toggleMotionMode = () => {
   mouseMode = false;
   syncMouseBtn();
 };
+
+// ── 루트 마이그레이션 (단일 → 다중) ──────────────────────
+function migrateRoutes() {
+  const routes = JSON.parse(localStorage.getItem("climbingRoutes") || "[]");
+  if (routes.length > 0) return;
+  try {
+    const data = JSON.parse(localStorage.getItem("climbingRoute") || "[]");
+    if (Array.isArray(data) && data.length > 0) {
+      const id    = `route_${Date.now()}`;
+      const route = { id, name: "Project 1", createdAt: Date.now(), holds: data,
+                      scrollMode: localStorage.getItem("routeScrollMode") || "follow" };
+      localStorage.setItem("climbingRoutes", JSON.stringify([route]));
+      localStorage.setItem("lastRouteId", id);
+    }
+  } catch {}
+}
+
+function loadRouteById(id) {
+  if (!id) return false;
+  try {
+    const routes = JSON.parse(localStorage.getItem("climbingRoutes") || "[]");
+    const route  = routes.find(r => r.id === id);
+    if (!route) return false;
+    localStorage.setItem("climbingRoute", JSON.stringify(route.holds));
+    localStorage.setItem("lastRouteId", id);
+    if (route.scrollMode) {
+      localStorage.setItem("routeScrollMode", route.scrollMode);
+      scrollMode = route.scrollMode;
+    }
+    currentRouteId = id;
+    return true;
+  } catch { return false; }
+}
+
+// ── 루트 패널 ────────────────────────────────────────────
+function renderRoutePanel() {
+  const list = document.getElementById("route-list");
+  if (!list) return;
+  const routes = JSON.parse(localStorage.getItem("climbingRoutes") || "[]");
+  if (routes.length === 0) {
+    list.innerHTML = '<div id="route-panel-empty">저장된 루트가 없습니다</div>';
+    return;
+  }
+  list.innerHTML = "";
+  for (const route of [...routes].reverse()) {
+    const date = new Date(route.createdAt).toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
+    const item = document.createElement("div");
+    item.className = "route-item" + (route.id === currentRouteId ? " active" : "");
+    item.innerHTML = `
+      <div style="flex:1;min-width:0;">
+        <div class="route-item-name">${route.name}</div>
+        <div class="route-item-date">${date} &middot; ${route.holds?.length ?? 0} holds</div>
+      </div>
+      <button class="route-item-del" data-id="${route.id}" title="삭제">🗑</button>`;
+    item.querySelector(".route-item-del").addEventListener("click", e => {
+      e.stopPropagation();
+      const delId  = e.currentTarget.dataset.id;
+      const updated = JSON.parse(localStorage.getItem("climbingRoutes") || "[]").filter(r => r.id !== delId);
+      localStorage.setItem("climbingRoutes", JSON.stringify(updated));
+      if (currentRouteId === delId) {
+        currentRouteId = null;
+        localStorage.removeItem("lastRouteId");
+      }
+      renderRoutePanel();
+    });
+    item.addEventListener("click", () => {
+      loadRouteById(route.id);
+      buildHolds();
+      leftPos = null; rightPos = null;
+      if (climbingState) { climbingState.leftHold = null; climbingState.rightHold = null; }
+      renderRoutePanel();
+      closeRoutePanel();
+    });
+    list.appendChild(item);
+  }
+}
+
+function openRoutePanel() {
+  renderRoutePanel();
+  document.getElementById("route-panel")?.classList.add("open");
+  document.getElementById("btn-routes")?.classList.add("active");
+}
+function closeRoutePanel() {
+  document.getElementById("route-panel")?.classList.remove("open");
+  document.getElementById("btn-routes")?.classList.remove("active");
+}
+function toggleRoutePanel() {
+  const panel = document.getElementById("route-panel");
+  if (panel?.classList.contains("open")) closeRoutePanel();
+  else openRoutePanel();
+}
+
+window.openRoutePanel   = openRoutePanel;
+window.closeRoutePanel  = closeRoutePanel;
+window.toggleRoutePanel = toggleRoutePanel;
+
+document.addEventListener("click", e => {
+  const panel = document.getElementById("route-panel");
+  const btnR  = document.getElementById("btn-routes");
+  if (panel?.classList.contains("open") && !panel.contains(e.target) && e.target !== btnR) {
+    closeRoutePanel();
+  }
+});
 
 function buildHolds() {
   holds = createHolds(canvas.width, WORLD_H);
@@ -75,6 +181,9 @@ async function init() {
   if (trackerResult.status === "rejected") {
     console.warn("HandTracker 초기화 실패:", trackerResult.reason);
   }
+  migrateRoutes();
+  const lastId = localStorage.getItem("lastRouteId");
+  loadRouteById(lastId);
   buildHolds();
   ready = true;
 }

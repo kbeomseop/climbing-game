@@ -69,6 +69,7 @@ let selectedPaletteIdx = null;
 let selectedHold       = null;
 let placedHolds        = [];
 let nextId             = 0;
+let currentRouteId     = null;
 
 let dragMode      = null;   // null | { type:"move"|"rotate"|"scale", hold, ...extra }
 let pendingSelect = null;   // mouseup 시 선택할 홀드
@@ -87,13 +88,26 @@ setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 0);
 
 // ── localStorage 로드 ───────────────────────────────────────
 {
-  const saved = localStorage.getItem("climbingRoute");
-  if (saved) {
+  let loaded = false;
+  const lastId = localStorage.getItem("lastRouteId");
+  if (lastId) {
     try {
-      const data = JSON.parse(saved);
+      const routes = JSON.parse(localStorage.getItem("climbingRoutes") || "[]");
+      const route  = routes.find(r => r.id === lastId);
+      if (route?.holds?.length > 0) {
+        placedHolds    = route.holds.map(h => ({ scale: 1, rotation: 0, ...h }));
+        nextId         = Math.max(...placedHolds.map(h => h.id)) + 1;
+        currentRouteId = route.id;
+        loaded = true;
+      }
+    } catch {}
+  }
+  if (!loaded) {
+    try {
+      const data = JSON.parse(localStorage.getItem("climbingRoute") || "[]");
       if (Array.isArray(data) && data.length > 0) {
         placedHolds = data.map(h => ({ scale: 1, rotation: 0, ...h }));
-        nextId = Math.max(...placedHolds.map(h => h.id)) + 1;
+        nextId      = Math.max(...placedHolds.map(h => h.id)) + 1;
       }
     } catch {}
   }
@@ -288,22 +302,63 @@ canvas.addEventListener("contextmenu", e => {
   if (hit) deleteHold(hit);
 });
 
+// ── 저장 모달 ────────────────────────────────────────────────
+function showSaveModal(placeholder, onConfirm) {
+  const ov = document.createElement("div");
+  ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000;";
+  ov.innerHTML = `
+    <div style="background:#1a1a2e;border:1px solid #444;border-radius:16px;padding:24px;min-width:280px;font-family:'Poppins',sans-serif;">
+      <p style="color:#fff;font-size:13px;font-weight:600;margin:0 0 12px;">루트 이름</p>
+      <input id="_rname" type="text" placeholder="${placeholder}"
+        style="width:100%;background:#0a0a14;color:#fff;border:1px solid #444;border-radius:8px;
+               padding:8px 12px;font-family:'Poppins',sans-serif;font-size:13px;outline:none;
+               box-sizing:border-box;margin-bottom:16px;">
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button id="_rcancel" style="background:#1e1e2e;color:#aaa;border:1px solid #444;
+          border-radius:8px;padding:8px 16px;font-family:'Poppins',sans-serif;cursor:pointer;">취소</button>
+        <button id="_rconfirm" style="background:#ff9f43;color:#fff;border:none;
+          border-radius:8px;padding:8px 16px;font-family:'Poppins',sans-serif;font-weight:600;cursor:pointer;">저장</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  const input = ov.querySelector("#_rname");
+  input.focus();
+  const close   = () => ov.remove();
+  const confirm = () => { const name = input.value.trim() || placeholder; close(); onConfirm(name); };
+  ov.querySelector("#_rcancel").addEventListener("click", close);
+  ov.querySelector("#_rconfirm").addEventListener("click", confirm);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") confirm(); if (e.key === "Escape") close(); });
+}
+
 // ── 버튼 ────────────────────────────────────────────────────
 document.getElementById("btn-save").addEventListener("click", () => {
-  localStorage.setItem("climbingRoute", JSON.stringify(placedHolds));
-  const btn = document.getElementById("btn-save");
-  btn.textContent = "✅";
-  setTimeout(() => { btn.textContent = "💾"; }, 1200);
+  const routes = JSON.parse(localStorage.getItem("climbingRoutes") || "[]");
+  const n      = routes.filter(r => r.id !== currentRouteId).length + 1;
+  showSaveModal(`Project ${n}`, name => {
+    const id  = currentRouteId || `route_${Date.now()}`;
+    const route = {
+      id, name,
+      createdAt: Date.now(),
+      holds: placedHolds,
+      scrollMode: localStorage.getItem("routeScrollMode") || "follow",
+    };
+    const idx = routes.findIndex(r => r.id === id);
+    if (idx >= 0) routes[idx] = route; else routes.push(route);
+    localStorage.setItem("climbingRoutes", JSON.stringify(routes));
+    localStorage.setItem("climbingRoute",  JSON.stringify(placedHolds));
+    localStorage.setItem("lastRouteId",    id);
+    currentRouteId = id;
+  });
 });
 document.getElementById("btn-play").addEventListener("click", () => {
   window.location.href = "/";
 });
 document.getElementById("btn-reset").addEventListener("click", () => {
-  placedHolds = []; nextId = 0; selectedHold = null;
+  placedHolds = []; nextId = 0; selectedHold = null; currentRouteId = null;
   wrap.scrollTop = wrap.scrollHeight;
 });
 document.getElementById("btn-new").addEventListener("click", () => {
-  placedHolds = []; nextId = 0; selectedHold = null;
+  placedHolds = []; nextId = 0; selectedHold = null; currentRouteId = null;
   wrap.scrollTop = wrap.scrollHeight;
 });
 
