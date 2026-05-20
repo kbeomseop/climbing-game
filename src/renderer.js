@@ -12,7 +12,7 @@ export class Renderer {
   constructor(canvas) {
     this.canvas   = canvas;
     this.ctx      = canvas.getContext("2d");
-    this._imgCache = new Map();
+    this.imgCache = {};
     this.scrollY  = 0;
 
     this._monkeyImgs  = {};
@@ -33,12 +33,12 @@ export class Renderer {
   }
 
   _getImg(name) {
-    if (!this._imgCache.has(name)) {
+    if (!this.imgCache[name]) {
       const img = new Image();
       img.src = `/holds/${name}`;
-      this._imgCache.set(name, img);
+      this.imgCache[name] = img;
     }
-    return this._imgCache.get(name);
+    return this.imgCache[name];
   }
 
   resize() {
@@ -96,56 +96,54 @@ export class Renderer {
 
     for (const h of holds) {
       const gripped   = lHold?.id === h.id || rHold?.id === h.id;
-      const screenY   = h.y;
       const typeColor = h.type === "start" ? "#00e676"
                       : h.type === "top"   ? "#ff6d00"
                       : null;
 
       if (h.img) {
-        // 이미지 홀드
-        const img      = this._getImg(h.img);
+        // 이미지 홀드 — 지연 로딩
+        if (!this.imgCache[h.img]) {
+          const _i = new Image();
+          _i.src = `/holds/${h.img}`;
+          this.imgCache[h.img] = _i;
+        }
+        const img      = this.imgCache[h.img];
         const scale    = h.scale    ?? 1;
-        const rotation = h.rotation ?? 0;
+        const rot      = (h.rotation ?? 0) * Math.PI / 180;
+        const imgReady = img.complete && img.naturalWidth > 0;
+        const dw = imgReady ? img.naturalWidth  * 0.2 * scale : 40;
+        const dh = imgReady ? img.naturalHeight * 0.2 * scale : 40;
 
         ctx.save();
-        if (gripped)                       { ctx.shadowBlur = 32; ctx.shadowColor = "rgba(144,202,249,0.7)"; }
-        else if (hoverHold?.id === h.id)   { ctx.shadowBlur = 48; ctx.shadowColor = "rgba(255,255,160,0.95)"; }
-        if (img.complete && img.naturalWidth > 0) {
-          const dw = img.naturalWidth  * 0.2 * scale;
-          const dh = img.naturalHeight * 0.2 * scale;
-          ctx.translate(h.x, screenY);
-          ctx.rotate((rotation * Math.PI) / 180);
+        if (gripped)                     { ctx.shadowBlur = 32; ctx.shadowColor = "rgba(144,202,249,0.7)"; }
+        else if (hoverHold?.id === h.id) { ctx.shadowBlur = 48; ctx.shadowColor = "rgba(255,255,160,0.95)"; }
+
+        if (imgReady) {
+          ctx.translate(h.x, h.y);
+          ctx.rotate(rot);
           ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
         } else {
           ctx.beginPath();
-          ctx.arc(h.x, screenY, gripped ? 22 : 17, 0, Math.PI * 2);
-          ctx.strokeStyle = gripped ? "#90caf9" : "#42a5f5";
-          ctx.lineWidth   = gripped ? 3 : 2;
-          ctx.stroke();
+          ctx.arc(h.x, h.y, 12, 0, Math.PI * 2);
+          ctx.fillStyle = "#42a5f5";
+          ctx.fill();
         }
         ctx.restore();
 
-        // 타입 링 + 텍스트 (홀드 크기 기반 반지름)
+        // 타입 링
         if (typeColor) {
-          const baseW  = img.complete && img.naturalWidth > 0 ? img.naturalWidth  * 0.2 : 40;
-          const baseH  = img.complete && img.naturalWidth > 0 ? img.naturalHeight * 0.2 : 40;
-          const typeR  = Math.max(baseW, baseH) * scale * 0.6 + 6;
+          const typeR     = Math.max(dw, dh) / 2 + 10;
           const ringColor = h.type === "start" ? "#00d2a0" : "#ff9f43";
           ctx.save();
           ctx.beginPath();
-          ctx.arc(h.x, screenY, typeR, 0, Math.PI * 2);
-          ctx.strokeStyle = ringColor;
-          ctx.lineWidth   = 2.5;
-          ctx.shadowBlur  = 12;
-          ctx.shadowColor = ringColor;
-          ctx.stroke();
+          ctx.arc(h.x, h.y, typeR, 0, Math.PI * 2);
+          ctx.strokeStyle = ringColor; ctx.lineWidth = 2.5;
+          ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
           ctx.restore();
           ctx.save();
-          ctx.font         = "700 10px 'Poppins', sans-serif";
-          ctx.fillStyle    = ringColor;
-          ctx.textAlign    = "center";
-          ctx.textBaseline = "top";
-          ctx.fillText(h.type === "start" ? "START" : "TOP", h.x, screenY + typeR + 4);
+          ctx.font = "700 10px 'Poppins', sans-serif";
+          ctx.fillStyle = ringColor; ctx.textAlign = "center"; ctx.textBaseline = "top";
+          ctx.fillText(h.type === "start" ? "START" : "TOP", h.x, h.y + typeR + 4);
           ctx.restore();
         }
 
@@ -153,10 +151,8 @@ export class Renderer {
         if (gripped) {
           ctx.save();
           ctx.beginPath();
-          ctx.arc(h.x, screenY, 40, 0, Math.PI * 2);
-          ctx.strokeStyle = "rgba(144,202,249,0.5)";
-          ctx.lineWidth   = 2;
-          ctx.stroke();
+          ctx.arc(h.x, h.y, Math.max(dw, dh) / 2 + 20, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(144,202,249,0.5)"; ctx.lineWidth = 2; ctx.stroke();
           ctx.restore();
         }
         continue;
@@ -176,34 +172,26 @@ export class Renderer {
       ctx.shadowBlur  = gripped ? 32 : (hoverHold?.id === h.id ? 48 : 18);
       ctx.shadowColor = (!gripped && hoverHold?.id === h.id) ? "rgba(255,255,160,0.95)" : glow;
       ctx.beginPath();
-      ctx.arc(h.x, screenY, outerR, 0, Math.PI * 2);
-      ctx.strokeStyle = color;
-      ctx.lineWidth   = gripped ? 3 : 2;
-      ctx.stroke();
+      ctx.arc(h.x, h.y, outerR, 0, Math.PI * 2);
+      ctx.strokeStyle = color; ctx.lineWidth = gripped ? 3 : 2; ctx.stroke();
       ctx.beginPath();
-      ctx.arc(h.x, screenY, innerR, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.fill();
+      ctx.arc(h.x, h.y, innerR, 0, Math.PI * 2);
+      ctx.fillStyle = color; ctx.fill();
       ctx.restore();
 
       if (typeColor) {
-        const typeR     = outerR + 6;
+        const typeR     = outerR + 10;
         const ringColor = h.type === "start" ? "#00d2a0" : "#ff9f43";
         ctx.save();
         ctx.beginPath();
-        ctx.arc(h.x, screenY, typeR, 0, Math.PI * 2);
-        ctx.strokeStyle = ringColor;
-        ctx.lineWidth   = 2.5;
-        ctx.shadowBlur  = 12;
-        ctx.shadowColor = ringColor;
-        ctx.stroke();
+        ctx.arc(h.x, h.y, typeR, 0, Math.PI * 2);
+        ctx.strokeStyle = ringColor; ctx.lineWidth = 2.5;
+        ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
         ctx.restore();
         ctx.save();
-        ctx.font         = "700 10px 'Poppins', sans-serif";
-        ctx.fillStyle    = ringColor;
-        ctx.textAlign    = "center";
-        ctx.textBaseline = "top";
-        ctx.fillText(h.type === "start" ? "START" : "TOP", h.x, screenY + typeR + 4);
+        ctx.font = "700 10px 'Poppins', sans-serif";
+        ctx.fillStyle = ringColor; ctx.textAlign = "center"; ctx.textBaseline = "top";
+        ctx.fillText(h.type === "start" ? "START" : "TOP", h.x, h.y + typeR + 4);
         ctx.restore();
       }
     }
