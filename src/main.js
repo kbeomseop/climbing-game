@@ -72,11 +72,20 @@ async function init() {
   ready = true;
 }
 
-// ── 스크롤 ────────────────────────────────────────────────
+// ── 스크롤 모드 ───────────────────────────────────────────
+let scrollMode     = localStorage.getItem("routeScrollMode") || "follow";
+let scrollOverride = null;   // "follow" 모드에서 휠 시 임시 "free"
+let wheelTimer     = null;
+
 window.addEventListener("wheel", e => {
   e.preventDefault();
   targetCameraY += e.deltaY * 0.8;
   targetCameraY = Math.max(0, Math.min(targetCameraY, WORLD_H - window.innerHeight));
+  if (scrollMode === "follow") {
+    scrollOverride = "free";
+    clearTimeout(wheelTimer);
+    wheelTimer = setTimeout(() => { scrollOverride = null; }, 3000);
+  }
 }, { passive: false });
 
 window.addEventListener("resize", () => {
@@ -171,13 +180,15 @@ function loop() {
   const pose      = character.compute(effL, effR, footHolds);
 
   // ── 카메라 팔로우 ──
-  if (pose) {
-    const headScreenY = pose.head.y - cameraY;
-    if (headScreenY < window.innerHeight * 0.35) {
-      targetCameraY = Math.max(0, pose.head.y - window.innerHeight * 0.35);
+  const effectiveMode = scrollOverride ?? scrollMode;
+  if (effectiveMode === "follow" && pose) {
+    const shoulderY       = (pose.lShoulder.y + pose.rShoulder.y) / 2;
+    const shoulderScreenY = shoulderY - cameraY;
+    if (shoulderScreenY > window.innerHeight * 0.65) {
+      targetCameraY = Math.max(0, shoulderY - window.innerHeight * 0.70);
     }
   }
-  cameraY += (targetCameraY - cameraY) * 0.08;
+  cameraY += (targetCameraY - cameraY) * 0.12;
   cameraY  = Math.max(0, Math.min(cameraY, WORLD_H - window.innerHeight));
   renderer.scrollY = cameraY;
 

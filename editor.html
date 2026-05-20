@@ -100,6 +100,15 @@
       <div class="sep"></div>
       <div id="palette"></div>
       <div class="spacer"></div>
+      <select id="scroll-mode"
+        onchange="localStorage.setItem('routeScrollMode', this.value)"
+        style="background:#1e1e2e; color:#fff; border:1px solid #444; border-radius:8px;
+               font-family:'Poppins',sans-serif; font-size:12px; padding:6px 12px;
+               cursor:pointer; outline:none; flex-shrink:0;">
+        <option value="follow">↕ 수직 등반</option>
+        <option value="free">↔ 트래버스</option>
+        <option value="fixed">⊞ 단일 화면</option>
+      </select>
     </div>
     <div id="canvas-wrap">
       <canvas id="canvas"></canvas>
@@ -112,6 +121,10 @@
     </div>
     <button class="fab fab-home" data-tip="게임으로" onclick="window.location.href='./'">🏠</button>
     <div id="hint">클릭: 배치 &nbsp;·&nbsp; 홀드 클릭: 선택 &nbsp;·&nbsp; 우클릭: 삭제</div>
+    <script>
+      const _sm = document.getElementById('scroll-mode');
+      _sm.value = localStorage.getItem('routeScrollMode') || 'follow';
+    </script>
     <script type="module" src="/src/editor.js"></script>
   </body>
 </html>
