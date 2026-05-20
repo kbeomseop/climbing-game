@@ -204,7 +204,7 @@ function loop() {
   }
 
   renderer.drawHolds(holds, lh, rh, hoverHold);
-  renderer.drawCharacter(pose);
+  renderer.drawCharacter(pose, { lHold: lh, rHold: rh });
   if (hands.length > 0) renderer.drawHandLandmarks(hands);
   renderer.drawMouseCursors({ mouseMode, mouse, activeKey, lastKey });
   renderer.drawUI({ ready, lHold: lh, rHold: rh, startHolds, noCam, mouseMode });

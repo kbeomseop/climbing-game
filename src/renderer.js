@@ -14,6 +14,20 @@ export class Renderer {
     this.ctx      = canvas.getContext("2d");
     this._imgCache = new Map();
     this.scrollY  = 0;
+
+    this._monkeyImgs  = {};
+    this._monkeyReady = {};
+    for (const [k, src] of [
+      ['idle',  '/monkey/monkey_idle.svg'],
+      ['climb', '/monkey/monkey_climb.svg'],
+      ['top',   '/monkey/monkey_top.svg'],
+    ]) {
+      const img = new Image();
+      img.onload = () => { this._monkeyReady[k] = true; };
+      img.src = src;
+      this._monkeyImgs[k] = img;
+    }
+
     this.resize();
     window.addEventListener("resize", () => this.resize());
   }
@@ -204,15 +218,26 @@ export class Renderer {
     return "DEFAULT";
   }
 
-  // ── 캐릭터 (월드 좌표 → 카메라 translate로 스크린 변환) ──
-  drawCharacter(pose) {
+  // ── 캐릭터 렌더링 ─────────────────────────────────────────
+  drawCharacter(pose, { lHold = null, rHold = null } = {}) {
     if (!pose) return;
     const ctx = this.ctx;
 
-    // 카메라 오프셋 적용: 이후 모든 월드 좌표가 스크린 좌표로 변환됨
+    let state = 'idle';
+    if (lHold?.type === 'top' || rHold?.type === 'top') state = 'top';
+    else if (lHold || rHold) state = 'climb';
+
     ctx.save();
     ctx.translate(0, -this.scrollY);
 
+    if (this._monkeyReady[state]) {
+      const W = 100, H = 130;
+      ctx.drawImage(this._monkeyImgs[state], pose.head.x - W / 2, pose.head.y - H * 0.2, W, H);
+      ctx.restore();
+      return;
+    }
+
+    // fallback: SVG 미로드 시 스틱맨 렌더링
     const MAIN  = "#c8855a";
     const PATCH = "#e8b48a";
     const LIMB  = "#b07040";
