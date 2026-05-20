@@ -31,6 +31,17 @@ let lastKey   = 'a';       // 마지막으로 누른 키
 let leftPos   = null;      // 왼손 월드 좌표 { x, y }
 let rightPos  = null;      // 오른손 월드 좌표 { x, y }
 
+function syncMouseBtn() {
+  const btn = document.getElementById('btn-mouse');
+  if (btn) btn.classList.toggle('active', mouseMode);
+}
+
+window.toggleMouseMode = () => {
+  mouseMode = !mouseMode;
+  if (!mouseMode) { leftPos = null; rightPos = null; }
+  syncMouseBtn();
+};
+
 function buildHolds() {
   holds = createHolds(canvas.width, WORLD_H);
   climbingState = new ClimbingState(holds);
@@ -51,6 +62,7 @@ async function init() {
   if (camResult.status === "rejected") {
     noCam     = true;
     mouseMode = true;
+    syncMouseBtn();
     console.warn("마우스 모드 진입:", camResult.reason);
   }
   if (trackerResult.status === "rejected") {

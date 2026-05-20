@@ -110,18 +110,28 @@ export class Renderer {
         }
         ctx.restore();
 
-        // 타입 링 + 필 뱃지
+        // 타입 링 + 텍스트 (홀드 크기 기반 반지름)
         if (typeColor) {
+          const baseW  = img.complete && img.naturalWidth > 0 ? img.naturalWidth  * 0.2 : 40;
+          const baseH  = img.complete && img.naturalWidth > 0 ? img.naturalHeight * 0.2 : 40;
+          const typeR  = Math.max(baseW, baseH) * scale * 0.6 + 6;
+          const ringColor = h.type === "start" ? "#00d2a0" : "#ff9f43";
           ctx.save();
           ctx.beginPath();
-          ctx.arc(h.x, screenY, 32, 0, Math.PI * 2);
-          ctx.strokeStyle = typeColor;
-          ctx.lineWidth   = 2;
+          ctx.arc(h.x, screenY, typeR, 0, Math.PI * 2);
+          ctx.strokeStyle = ringColor;
+          ctx.lineWidth   = 2.5;
           ctx.shadowBlur  = 12;
-          ctx.shadowColor = typeColor;
+          ctx.shadowColor = ringColor;
           ctx.stroke();
           ctx.restore();
-          this._drawTypePill(h.x, screenY - 46, h.type);
+          ctx.save();
+          ctx.font         = "700 10px 'Poppins', sans-serif";
+          ctx.fillStyle    = ringColor;
+          ctx.textAlign    = "center";
+          ctx.textBaseline = "top";
+          ctx.fillText(h.type === "start" ? "START" : "TOP", h.x, screenY + typeR + 4);
+          ctx.restore();
         }
 
         // 그립 링
@@ -162,7 +172,24 @@ export class Renderer {
       ctx.restore();
 
       if (typeColor) {
-        this._drawTypePill(h.x, screenY - outerR - 14, h.type);
+        const typeR     = outerR + 6;
+        const ringColor = h.type === "start" ? "#00d2a0" : "#ff9f43";
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(h.x, screenY, typeR, 0, Math.PI * 2);
+        ctx.strokeStyle = ringColor;
+        ctx.lineWidth   = 2.5;
+        ctx.shadowBlur  = 12;
+        ctx.shadowColor = ringColor;
+        ctx.stroke();
+        ctx.restore();
+        ctx.save();
+        ctx.font         = "700 10px 'Poppins', sans-serif";
+        ctx.fillStyle    = ringColor;
+        ctx.textAlign    = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText(h.type === "start" ? "START" : "TOP", h.x, screenY + typeR + 4);
+        ctx.restore();
       }
     }
   }
@@ -454,8 +481,8 @@ export class Renderer {
 
     if (state.mouseMode) {
       // 마우스 모드 표시
-      ctx.font      = "600 13px 'Poppins', sans-serif";
-      ctx.fillStyle = "rgba(80,210,255,0.85)";
+      ctx.font      = "600 12px 'Poppins', sans-serif";
+      ctx.fillStyle = "#ff9f43";
       ctx.fillText("🖱 마우스 모드", 24, 58);
       // 홀드 상태
       ctx.font = "400 12px 'Poppins', sans-serif";

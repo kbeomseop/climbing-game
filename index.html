@@ -11,41 +11,41 @@
       canvas { display: block; }
       video  { display: none; }
 
-      .fab-bar {
-        position: fixed; bottom: 24px; left: 16px;
-        display: flex; gap: 10px; z-index: 10;
+      .tab-bar {
+        position: fixed; left: 0; top: 50%; transform: translateY(-50%);
+        background: rgba(15,15,30,0.9); border-radius: 0 12px 12px 0;
+        display: flex; flex-direction: column; align-items: center;
+        padding: 10px 8px; gap: 8px; z-index: 100;
       }
-      .fab {
+      .tab-btn {
         width: 48px; height: 48px; border-radius: 999px;
         font-size: 1.25rem; cursor: pointer;
         display: flex; align-items: center; justify-content: center;
-        font-family: 'Poppins', sans-serif; font-weight: 700;
-        position: relative; transition: transform 0.1s, opacity 0.15s;
-        border: none;
+        border: 2px solid #ff9f43; background: #1e1e2e;
+        color: #fff; position: relative;
+        transition: background 0.15s, transform 0.1s;
+        flex-shrink: 0;
       }
-      .fab:active { transform: translateY(2px); }
-      .fab-edit {
-        background: #1e1e2e; color: #ff9f43;
-        border: 2px solid #ff9f43;
-      }
-      .fab-edit:hover { opacity: 0.85; }
-      .fab::after {
+      .tab-btn:active { transform: scale(0.92); }
+      .tab-btn.active { background: #ff9f43; }
+      .tab-btn::after {
         content: attr(data-tip);
-        position: absolute; bottom: calc(100% + 8px);
-        left: 50%; transform: translateX(-50%);
-        background: rgba(0,0,0,0.8); color: #fff;
+        position: absolute; left: calc(100% + 12px);
+        top: 50%; transform: translateY(-50%);
+        background: rgba(0,0,0,0.85); color: #fff;
         font-size: 11px; font-family: 'Poppins', sans-serif; font-weight: 400;
         padding: 4px 10px; border-radius: 8px; white-space: nowrap;
         pointer-events: none; opacity: 0; transition: opacity 0.15s;
       }
-      .fab:hover::after { opacity: 1; }
+      .tab-btn:hover::after { opacity: 1; }
     </style>
   </head>
   <body>
     <video id="webcam" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
-    <div class="fab-bar">
-      <button class="fab fab-edit" data-tip="편집" onclick="location.href='./editor.html'">✏️</button>
+    <div class="tab-bar">
+      <button id="btn-mouse" class="tab-btn" data-tip="마우스 모드" onclick="window.toggleMouseMode()">🖱</button>
+      <button class="tab-btn" data-tip="편집" onclick="location.href='./editor.html'">✏️</button>
     </div>
     <script type="module" src="/src/main.js"></script>
   </body>
