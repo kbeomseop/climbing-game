@@ -17,9 +17,9 @@ function drawTypePill(ctx, x, y, type) {
 }
 
 const HOLD_TYPES = [
-  { img: "hold1_banana.png", label: "Banana" },
-  { img: "hold2_mid.png",    label: "Mid"    },
-  { img: "hold3_tri.png",    label: "Tri"    },
+  { img: "hold1_banana.png", label: "Banana", color: "Yellow" },
+  { img: "hold2_mid.png",    label: "Mid",    color: "Yellow" },
+  { img: "hold3_tri.png",    label: "Tri",    color: "Yellow" },
 ];
 
 const WORLD_SCALE  = 2.5;
@@ -118,19 +118,57 @@ setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 0);
   }
 }
 
-// ── 팔레트 빌드 (상단 가로) ─────────────────────────────────
-const paletteEls = HOLD_TYPES.map((ht, i) => {
-  const el = document.createElement("div");
-  el.className = "palette-item";
-  el.innerHTML = `<img src="./holds/${ht.img}" alt="${ht.label}"><span>${ht.label}</span>`;
-  el.addEventListener("click", () => {
-    selectedPaletteIdx = (selectedPaletteIdx === i) ? null : i;
-    paletteEls.forEach((e, j) => e.classList.toggle("selected", j === selectedPaletteIdx));
-    if (selectedPaletteIdx !== null) selectedHold = null;
+// ── 팔레트 빌드 (색상 탭 + 썸네일) ─────────────────────────
+const COLOR_TABS = [
+  { id: "all",    label: "전체",   style: "background:linear-gradient(135deg,#ff9f43,#54a0ff)" },
+  { id: "Yellow", label: "Yellow", style: "background:#f9ca24" },
+  { id: "Red",    label: "Red",    style: "background:#ee5a24" },
+  { id: "Black",  label: "Black",  style: "background:#2d3436" },
+];
+let activeColorTab = localStorage.getItem("holdColorTab") || "all";
+let paletteEls = [];
+
+function rebuildPalette() {
+  palette.innerHTML = "";
+  paletteEls = [];
+  const filtered = (activeColorTab === "all")
+    ? HOLD_TYPES.map((ht, i) => ({ ht, i }))
+    : HOLD_TYPES.map((ht, i) => ({ ht, i })).filter(({ ht }) => ht.color === activeColorTab);
+  if (selectedPaletteIdx !== null && !filtered.some(({ i }) => i === selectedPaletteIdx)) {
+    selectedPaletteIdx = null;
+  }
+  for (const { ht, i } of filtered) {
+    const el = document.createElement("div");
+    el.className = "palette-item" + (selectedPaletteIdx === i ? " selected" : "");
+    el.innerHTML = `<img src="./holds/${ht.img}" alt="${ht.label}"><span>${ht.label}</span>`;
+    el.addEventListener("click", () => {
+      selectedPaletteIdx = (selectedPaletteIdx === i) ? null : i;
+      if (selectedPaletteIdx !== null) selectedHold = null;
+      rebuildPalette();
+    });
+    palette.appendChild(el);
+    paletteEls.push(el);
+  }
+}
+
+const colorTabsEl  = document.getElementById("color-tabs");
+const colorTabBtns = [];
+for (const tab of COLOR_TABS) {
+  const btn = document.createElement("button");
+  btn.className = "color-tab" + (activeColorTab === tab.id ? " active" : "");
+  btn.setAttribute("style", tab.style);
+  btn.title = tab.label;
+  btn.addEventListener("click", () => {
+    activeColorTab = tab.id;
+    localStorage.setItem("holdColorTab", activeColorTab);
+    colorTabBtns.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    rebuildPalette();
   });
-  palette.appendChild(el);
-  return el;
-});
+  colorTabsEl.appendChild(btn);
+  colorTabBtns.push(btn);
+}
+rebuildPalette();
 
 // ── 컨트롤 핸들 위치 (캔버스 절대좌표) ─────────────────────
 const ctrlRot    = h => ({ x: h.x,      y: h.y - 68 });   // 상단 – 회전

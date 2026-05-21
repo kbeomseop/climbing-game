@@ -11,12 +11,30 @@
       canvas { display: block; }
       video  { display: none; }
 
+      /* ── 탭 바 ── */
       .tab-bar {
         position: fixed; left: 0; top: 50%; transform: translateY(-50%);
         background: rgba(15,15,30,0.9); border-radius: 0 12px 12px 0;
         display: flex; flex-direction: column; align-items: center;
-        padding: 10px 8px; gap: 8px; z-index: 100;
+        padding: 10px 8px 12px; gap: 4px; z-index: 100;
       }
+
+      /* 섹션 라벨 */
+      .tab-section-label {
+        font-family: 'Poppins', sans-serif;
+        font-size: 8px; font-weight: 400;
+        color: rgba(255,255,255,0.3);
+        letter-spacing: 0.08em; text-transform: uppercase;
+        margin: 4px 0 2px; width: 100%; text-align: center;
+      }
+      /* 구분선 */
+      .tab-divider {
+        width: 32px; height: 1px;
+        background: rgba(255,255,255,0.1);
+        margin: 4px 0;
+      }
+
+      /* 일반 탭 버튼 */
       .tab-btn {
         width: 48px; height: 48px; border-radius: 999px;
         font-size: 1.25rem; cursor: pointer;
@@ -39,7 +57,26 @@
       }
       .tab-btn:hover::after { opacity: 1; }
 
-      /* 루트 패널 */
+      /* 비활성 버튼 */
+      .tab-btn-disabled {
+        background: rgba(30,30,46,0.5) !important;
+        border-color: rgba(255,159,67,0.2) !important;
+        color: rgba(255,255,255,0.25) !important;
+        cursor: not-allowed !important;
+      }
+      .tab-btn-disabled:active { transform: none !important; }
+
+      /* 준비중 뱃지 */
+      .tab-btn-wrap { position: relative; display: flex; }
+      .badge-soon {
+        position: absolute; top: -4px; right: -4px;
+        background: #444; color: #aaa;
+        font-size: 8px; border-radius: 999px; padding: 1px 5px;
+        font-family: 'Poppins', sans-serif; line-height: 1.5;
+        pointer-events: none; white-space: nowrap;
+      }
+
+      /* ── 루트 패널 ── */
       #route-panel {
         position: fixed; left: 72px; top: 50%; transform: translateY(-50%);
         background: rgba(15,15,30,0.96); border: 1px solid rgba(255,255,255,0.1);
@@ -76,16 +113,35 @@
   <body>
     <video id="webcam" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
+
     <div class="tab-bar">
+      <!-- 🎮 플레이 섹션 -->
+      <span class="tab-section-label">🎮 플레이</span>
       <button id="btn-motion" class="tab-btn active" data-tip="모션 감지" onclick="window.toggleMotionMode()">✋</button>
       <button id="btn-mouse"  class="tab-btn"        data-tip="마우스 모드" onclick="window.toggleMouseMode()">🖱</button>
-      <button id="btn-routes" class="tab-btn"        data-tip="루트 선택"  onclick="window.toggleRoutePanel()">📋</button>
+
+      <div class="tab-divider"></div>
+
+      <!-- 📂 루트 섹션 -->
+      <span class="tab-section-label">📂 루트</span>
+      <button id="btn-routes" class="tab-btn" data-tip="루트 선택" onclick="window.toggleRoutePanel()">📋</button>
       <button class="tab-btn" data-tip="편집" onclick="location.href='./editor.html'">✏️</button>
+
+      <div class="tab-divider"></div>
+
+      <!-- 👥 멀티 섹션 -->
+      <span class="tab-section-label">👥 멀티</span>
+      <div class="tab-btn-wrap">
+        <button class="tab-btn tab-btn-disabled" data-tip="멀티플레이">🤝</button>
+        <span class="badge-soon">준비중</span>
+      </div>
     </div>
+
     <div id="route-panel">
       <h3>루트 선택</h3>
       <div id="route-list"></div>
     </div>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
