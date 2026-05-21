@@ -178,8 +178,8 @@ function deleteHold(h) {
 
 // ── 유틸 ────────────────────────────────────────────────────
 function getPos(e) {
-  const rect = canvas.getBoundingClientRect();
-  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  const rect = wrap.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top + wrap.scrollTop };
 }
 
 function getHoldAt(x, y) {
@@ -551,7 +551,7 @@ function drawHold(h) {
     ctx.stroke(); ctx.setLineDash([]);
     ctx.restore();
     drawControls(h);
-  } else if (!tc) {
+  } else if (h.type !== "start" && h.type !== "top") {
     ctx.save();
     ctx.beginPath(); ctx.arc(h.x, h.y, 40, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(255,255,255,0.07)"; ctx.lineWidth = 1; ctx.stroke();
