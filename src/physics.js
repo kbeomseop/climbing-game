@@ -2,7 +2,7 @@ export class Physics {
   constructor() {
     this.maxReach         = 320
     this.snapRadius       = 55
-    this.balanceTolerance = 0.48
+    this.balanceTolerance = 0.55
     this.fallState        = null  // null | 'hanging' | 'falling'
     this.fallTimer        = 0
     this.fallX            = 0

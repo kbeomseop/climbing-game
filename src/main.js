@@ -319,7 +319,7 @@ function loop(timestamp) {
   const pose      = character.compute(effL, effR, footHolds);
 
   // ── 물리: 균형 체크 → 낙하 트리거 ──
-  if (pose && !physics.fallState) {
+  if (pose && !physics.fallState && (lh || rh)) {
     const balance = physics.checkBalance(pose);
     if (!balance.stable) physics.triggerFall(pose);
   }

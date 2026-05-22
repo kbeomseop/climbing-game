@@ -301,7 +301,7 @@ export class Renderer {
     const ctx = this.ctx;
 
     let state = 'idle';
-    if (lHold?.type === 'top' || rHold?.type === 'top') state = 'top';
+    if (lHold?.type === 'top' && rHold?.type === 'top') state = 'top';
     else if (lHold || rHold) state = 'climb';
 
     const offsetX = fallData ? fallData.x - pose.head.x : 0;
@@ -625,7 +625,7 @@ export class Renderer {
     }
 
     // SUMMIT (공통)
-    if (state.lHold?.type === "top" || state.rHold?.type === "top") {
+    if (state.lHold?.type === "top" && state.rHold?.type === "top") {
       ctx.font      = "700 36px 'Poppins', sans-serif";
       ctx.fillStyle = "#ff9f43";
       ctx.textAlign = "center";
