@@ -88,6 +88,93 @@ export class Renderer {
     ctx.restore();
   }
 
+  // ── 바닥 (크래시패드) ────────────────────────────────────
+  drawFloor(scrollY, holds) {
+    const ctx = this.ctx;
+    const W   = this.canvas.width;
+
+    const startHolds   = holds.filter(h => h.type === 'start');
+    const lowestStartY = startHolds.length > 0
+      ? Math.max(...startHolds.map(h => h.y)) + 80
+      : this.canvas.height * 2 - 100;
+
+    const floorY = lowestStartY - scrollY;
+    if (floorY > this.canvas.height + 50) return;
+    if (floorY < -100) return;
+
+    ctx.save();
+
+    // 벽 끝 라인
+    ctx.beginPath();
+    ctx.moveTo(0, floorY - 4);
+    ctx.lineTo(W, floorY - 4);
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // 크래시패드 외곽
+    const matH = 28;
+    ctx.beginPath();
+    ctx.roundRect(W * 0.05, floorY, W * 0.9, matH, 12);
+    ctx.fillStyle = '#3d2a1a';
+    ctx.fill();
+
+    // 크래시패드 메인
+    ctx.beginPath();
+    ctx.roundRect(W * 0.05 + 3, floorY + 3, W * 0.9 - 6, matH - 6, 9);
+    ctx.fillStyle = '#c8855a';
+    ctx.globalAlpha = 0.75;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // 섹션 분할선
+    const sections = 5;
+    for (let i = 1; i < sections; i++) {
+      const sx = W * 0.05 + 3 + (W * 0.9 - 6) * (i / sections);
+      ctx.beginPath();
+      ctx.moveTo(sx, floorY + 4);
+      ctx.lineTo(sx, floorY + matH - 4);
+      ctx.strokeStyle = 'rgba(160,96,53,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // 상단 하이라이트
+    ctx.beginPath();
+    ctx.roundRect(W * 0.05 + 3, floorY + 3, W * 0.9 - 6, 6, [9, 9, 0, 0]);
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fill();
+
+    // 고무 바닥
+    ctx.beginPath();
+    ctx.rect(0, floorY + matH, W, 20);
+    ctx.fillStyle = '#111118';
+    ctx.fill();
+
+    // 고무 바닥 격자
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 0.5;
+    const gridSize = 20;
+    for (let x = 0; x < W; x += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, floorY + matH);
+      ctx.lineTo(x, floorY + matH + 20);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.moveTo(0, floorY + matH + 10);
+    ctx.lineTo(W, floorY + matH + 10);
+    ctx.stroke();
+
+    // 바닥 아래 채우기
+    ctx.beginPath();
+    ctx.rect(0, floorY + matH + 20, W, this.canvas.height);
+    ctx.fillStyle = '#0a0a14';
+    ctx.fill();
+
+    ctx.restore();
+  }
+
   // ── 홀드 렌더링 ──────────────────────────────────────────
   drawHolds(holds, lHold, rHold, hoverHold = null, scrollY = 0) {
     const ctx = this.ctx;

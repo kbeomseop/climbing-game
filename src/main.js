@@ -161,11 +161,23 @@ document.addEventListener("click", e => {
   }
 });
 
+function getLowestStartY() {
+  const sh = holds.filter(h => h.type === "start");
+  return sh.length > 0
+    ? Math.max(...sh.map(h => h.y)) + 80
+    : canvas.height * 2 - 200;
+}
+
 function buildHolds() {
   holds = createHolds(canvas.width, WORLD_H);
   climbingState = new ClimbingState(holds);
   startHolds = holds.filter(h => h.type === "start").sort((a, b) => a.x - b.x);
   physics.reset();
+
+  // 바닥이 보이는 위치로 카메라 초기화
+  const lowestStartY = getLowestStartY();
+  scrollY       = Math.max(0, lowestStartY - canvas.height * 0.75);
+  targetScrollY = scrollY;
 }
 
 async function initWebcam() {
@@ -286,16 +298,18 @@ function loop(timestamp) {
   const rh = climbingState.rightHold;
 
   // ── 유효 손 위치 (월드 좌표) ──
+  const lowestStartY = getLowestStartY();
+  const defaultHandY = lowestStartY - 120;
   const effL = lh ?? (mouseMode && leftPos
     ? leftPos
     : startHolds[0]
     ? { x: startHolds[0].x, y: startHolds[0].y + 80 }
-    : { x: canvas.width * 0.35, y: WORLD_H * 0.88 });
+    : { x: canvas.width * 0.35, y: defaultHandY });
   const effR = rh ?? (mouseMode && rightPos
     ? rightPos
     : startHolds[1]
     ? { x: startHolds[1].x, y: startHolds[1].y + 80 }
-    : { x: canvas.width * 0.65, y: WORLD_H * 0.88 });
+    : { x: canvas.width * 0.65, y: defaultHandY });
 
   const hipPos = {
     x: (effL.x + effR.x) / 2,
@@ -329,7 +343,8 @@ function loop(timestamp) {
       targetScrollY = Math.max(0, charY - window.innerHeight * 0.85);
     }
     scrollY += (targetScrollY - scrollY) * 0.15;
-    scrollY = Math.max(0, scrollY);
+    const minScrollY = getLowestStartY() - canvas.height * 0.85;
+    scrollY = Math.max(minScrollY, scrollY);
   }
 
   // ── 렌더링 ──
@@ -347,6 +362,7 @@ function loop(timestamp) {
     }
   }
 
+  renderer.drawFloor(scrollY, holds);
   renderer.drawHolds(holds, lh, rh, hoverHold, scrollY);
   renderer.drawCharacter(pose, scrollY, fallData, lh, rh);
   if (hands.length > 0) renderer.drawHandLandmarks(hands, scrollY);
