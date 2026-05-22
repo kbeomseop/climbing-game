@@ -199,17 +199,17 @@ export class Renderer {
   }
 
   // ── 모션 감지 ────────────────────────────────────────────
-  _detectMotion(pose) {
+  _detectMotion(pose, lHold, rHold) {
+    if (lHold?.type === 'top' && rHold?.type === 'top') return "SUMMIT";
     const shoulderY = (pose.lShoulder.y + pose.rShoulder.y) / 2;
     const lUp = pose.lHand.y < shoulderY - 30;
     const rUp = pose.rHand.y < shoulderY - 30;
-    if (lUp && rUp) return "SUMMIT";
     if (lUp || rUp) return "REACH";
     return "DEFAULT";
   }
 
   // ── 캐릭터 렌더링 ─────────────────────────────────────────
-  drawCharacter(pose, { lHold = null, rHold = null } = {}, scrollY = 0, fallData = null) {
+  drawCharacter(pose, scrollY = 0, fallData = null, lHold = null, rHold = null) {
     if (!pose) return;
     const ctx = this.ctx;
 
@@ -241,7 +241,7 @@ export class Renderer {
     const WHITE = "#ffffff";
     const MOUTH = "#7a4030";
 
-    const motion = this._detectMotion(pose);
+    const motion = this._detectMotion(pose, lHold, rHold);
 
     const circ = (x, y, r, color) => {
       ctx.save();
