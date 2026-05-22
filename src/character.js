@@ -3,7 +3,6 @@ function clamp(v, lo, hi) {
 }
 
 // 2-bone IK: returns joint (elbow/knee) position
-// bendSign: +1 = clockwise bend in canvas coords, -1 = counter-clockwise
 function ik2(origin, target, len1, len2, bendSign) {
   const dx = target.x - origin.x;
   const dy = target.y - origin.y;
@@ -18,6 +17,17 @@ function ik2(origin, target, len1, len2, bendSign) {
   return {
     x: origin.x + Math.cos(jAngle) * len1,
     y: origin.y + Math.sin(jAngle) * len1,
+  };
+}
+
+function clampTarget(origin, target, maxDist) {
+  const dx = target.x - origin.x;
+  const dy = target.y - origin.y;
+  const d  = Math.hypot(dx, dy);
+  if (d <= maxDist) return target;
+  return {
+    x: origin.x + (dx / d) * maxDist,
+    y: origin.y + (dy / d) * maxDist,
   };
 }
 
@@ -40,38 +50,57 @@ export class Character {
     const cx = (lh.x + rh.x) / 2;
     const cy = (lh.y + rh.y) / 2;
 
-    // Body hangs below the midpoint of hands
-    const shoulderY = cy + 55;
-    const hipY = shoulderY + this.TORSO;
+    const shoulderY  = cy + 55;
+    const hipY       = shoulderY + this.TORSO;
 
     const lShoulder = { x: cx - this.SW / 2, y: shoulderY };
     const rShoulder = { x: cx + this.SW / 2, y: shoulderY };
-    const lHip = { x: cx - this.HW / 2, y: hipY };
-    const rHip = { x: cx + this.HW / 2, y: hipY };
-    const neck = { x: cx, y: shoulderY };
-    const pelvis = { x: cx, y: hipY };
-    const head = { x: cx, y: shoulderY - this.HEAD_R - 6 };
+    const lHip      = { x: cx - this.HW / 2, y: hipY };
+    const rHip      = { x: cx + this.HW / 2, y: hipY };
+    const neck      = { x: cx, y: shoulderY };
+    const pelvis    = { x: cx, y: hipY };
+    const head      = { x: cx, y: shoulderY - this.HEAD_R - 6 };
 
-    // Arms: left elbow bends left (-1), right elbow bends right (+1)
-    const lElbow = ik2(lShoulder, lh, this.UA, this.FA, -1);
-    const rElbow = ik2(rShoulder, rh, this.UA, this.FA, 1);
+    // ── 팔 클램핑 ──────────────────────────────────────────
+    const ARM_MAX = this.UA + this.FA;   // 175px
+    const lHandClamped = clampTarget(lShoulder, lh, ARM_MAX);
+    const rHandClamped = clampTarget(rShoulder, rh, ARM_MAX);
 
-    // Feet default to hanging position if no hold
-    const lFoot = footHolds[0] ?? { x: lHip.x - 12, y: hipY + this.TH + this.SH };
-    const rFoot = footHolds[1] ?? { x: rHip.x + 12, y: hipY + this.TH + this.SH };
+    const lArmDist = Math.hypot(lh.x - lShoulder.x, lh.y - lShoulder.y);
+    const rArmDist = Math.hypot(rh.x - rShoulder.x, rh.y - rShoulder.y);
 
-    // Knees: spread outward (+1 left, -1 right)
-    const lKnee = ik2(lHip, lFoot, this.TH, this.SH, 1);
-    const rKnee = ik2(rHip, rFoot, this.TH, this.SH, -1);
+    const lElbow = ik2(lShoulder, lHandClamped, this.UA, this.FA, -1);
+    const rElbow = ik2(rShoulder, rHandClamped, this.UA, this.FA,  1);
+
+    // ── 다리 클램핑 ────────────────────────────────────────
+    const LEG_MAX = this.TH + this.SH;   // 183px
+    const lFootRaw = footHolds[0] ?? { x: lHip.x - 12, y: hipY + this.TH + this.SH };
+    const rFootRaw = footHolds[1] ?? { x: rHip.x + 12, y: hipY + this.TH + this.SH };
+
+    const lFootClamped = clampTarget(lHip, lFootRaw, LEG_MAX);
+    const rFootClamped = clampTarget(rHip, rFootRaw, LEG_MAX);
+
+    const lLegDist = Math.hypot(lFootRaw.x - lHip.x, lFootRaw.y - lHip.y);
+    const rLegDist = Math.hypot(rFootRaw.x - rHip.x, rFootRaw.y - rHip.y);
+
+    const lKnee = ik2(lHip, lFootClamped, this.TH, this.SH,  1);
+    const rKnee = ik2(rHip, rFootClamped, this.TH, this.SH, -1);
 
     return {
       head, neck, pelvis,
       lShoulder, rShoulder,
       lElbow, rElbow,
-      lHand: lh, rHand: rh,
-      lHip, rHip,
-      lKnee, rKnee,
-      lFoot, rFoot,
+      lHand:  lHandClamped,
+      rHand:  rHandClamped,
+      lHip,   rHip,
+      lKnee,  rKnee,
+      lFoot:  lFootClamped,
+      rFoot:  rFootClamped,
+      // 스트레치 여부 (renderer에서 색상 변환용)
+      lArmStretched: lArmDist > ARM_MAX * 0.9,
+      rArmStretched: rArmDist > ARM_MAX * 0.9,
+      lLegStretched: lLegDist > LEG_MAX * 0.9,
+      rLegStretched: rLegDist > LEG_MAX * 0.9,
     };
   }
 }

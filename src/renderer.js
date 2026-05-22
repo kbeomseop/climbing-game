@@ -283,10 +283,13 @@ export class Renderer {
     }
 
     // ── 다리 ────────────────────────────────────────────────
-    bone(pose.lHip, pose.lKnee, 10, LIMB);
-    bone(pose.lKnee, pose.lFoot, 9, LIMB);
-    bone(pose.rHip, pose.rKnee, 10, LIMB);
-    bone(pose.rKnee, pose.rFoot, 9, LIMB);
+    const LIMB_STRETCH = "#c08050";
+    const lLegColor = pose.lLegStretched ? LIMB_STRETCH : LIMB;
+    const rLegColor = pose.rLegStretched ? LIMB_STRETCH : LIMB;
+    bone(pose.lHip, pose.lKnee, 10, lLegColor);
+    bone(pose.lKnee, pose.lFoot, 9, lLegColor);
+    bone(pose.rHip, pose.rKnee, 10, rLegColor);
+    bone(pose.rKnee, pose.rFoot, 9, rLegColor);
 
     const drawFoot = f => {
       ctx.save();
@@ -317,10 +320,13 @@ export class Renderer {
     }
 
     // ── 팔 ──────────────────────────────────────────────────
-    bone(pose.lShoulder, pose.lElbow, 9, MAIN);
-    bone(pose.lElbow,    pose.lHand,  8, MAIN);
-    bone(pose.rShoulder, pose.rElbow, 9, MAIN);
-    bone(pose.rElbow,    pose.rHand,  8, MAIN);
+    const ARM_STRETCH = "#d4956a";
+    const lArmColor = pose.lArmStretched ? ARM_STRETCH : MAIN;
+    const rArmColor = pose.rArmStretched ? ARM_STRETCH : MAIN;
+    bone(pose.lShoulder, pose.lElbow, 9, lArmColor);
+    bone(pose.lElbow,    pose.lHand,  8, lArmColor);
+    bone(pose.rShoulder, pose.rElbow, 9, rArmColor);
+    bone(pose.rElbow,    pose.rHand,  8, rArmColor);
 
     const drawHand = h => {
       circ(h.x, h.y, 9, MAIN);
