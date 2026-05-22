@@ -37,26 +37,24 @@ export class ClimbingState {
     this.rightHold = null;
   }
 
-  update(hands, canvasWidth, scrollY = 0) {
+  update(hands, canvasWidth, physics, scrollY = 0) {
     const half = canvasWidth / 2;
     for (const hand of hands) {
       const isLeft = hand.palmCenter.x < half;
-      // 뷰포트 좌표 → 월드 좌표로 변환
-      const pos = { x: hand.palmCenter.x, y: hand.palmCenter.y + scrollY };
+      const pos    = { x: hand.palmCenter.x, y: hand.palmCenter.y + scrollY };
 
-      let nearest = null;
+      let nearest     = null;
       let nearestDist = Infinity;
       for (const h of this.holds) {
         const d = dist(pos, h);
-        if (d < nearestDist) {
-          nearest = h;
-          nearestDist = d;
-        }
+        if (d < nearestDist) { nearest = h; nearestDist = d; }
       }
 
       if (nearest && nearestDist < SNAP_R) {
-        if (isLeft) this.leftHold = nearest;
-        else this.rightHold = nearest;
+        const currentHold = isLeft ? this.leftHold : this.rightHold;
+        if (physics && !physics.canReach(currentHold, nearest)) continue;
+        if (isLeft) this.leftHold  = nearest;
+        else        this.rightHold = nearest;
       }
     }
   }

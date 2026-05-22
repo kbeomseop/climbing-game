@@ -209,7 +209,7 @@ export class Renderer {
   }
 
   // ── 캐릭터 렌더링 ─────────────────────────────────────────
-  drawCharacter(pose, { lHold = null, rHold = null } = {}, scrollY = 0) {
+  drawCharacter(pose, { lHold = null, rHold = null } = {}, scrollY = 0, fallData = null) {
     if (!pose) return;
     const ctx = this.ctx;
 
@@ -217,8 +217,12 @@ export class Renderer {
     if (lHold?.type === 'top' || rHold?.type === 'top') state = 'top';
     else if (lHold || rHold) state = 'climb';
 
+    const offsetX = fallData ? fallData.x - pose.head.x : 0;
+    const offsetY = fallData ? fallData.y - pose.head.y : 0;
+
     ctx.save();
-    ctx.translate(0, -scrollY);
+    ctx.globalAlpha = fallData?.alpha ?? 1;
+    ctx.translate(offsetX, -scrollY + offsetY);
 
     if (this._monkeyReady[state]) {
       const W = 100, H = 130;
