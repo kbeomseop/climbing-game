@@ -89,15 +89,18 @@ function resize() {
 }
 window.addEventListener("resize", resize);
 resize();
+
+const getEditorMatY = () => canvas.height - 60;
+
 setTimeout(() => {
-  const sh = placedHolds.filter(h => h.type === 'start');
-  if (sh.length > 0) {
-    const lowestY = Math.max(...sh.map(h => h.y)) + 80;
-    wrap.scrollTop = Math.max(0, lowestY - wrap.clientHeight * 0.8);
-  } else {
-    wrap.scrollTop = 0;
-  }
+  const matY = getEditorMatY();
+  wrap.scrollTop = Math.max(0, matY - wrap.clientHeight * 0.75);
 }, 50);
+
+wrap.addEventListener('scroll', () => {
+  const minScroll = Math.max(0, getEditorMatY() - wrap.clientHeight * 0.85);
+  if (wrap.scrollTop < minScroll) wrap.scrollTop = minScroll;
+});
 
 // ── localStorage 로드 ───────────────────────────────────────
 {
@@ -245,9 +248,7 @@ const d2 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
 // ── 원숭이 헬퍼 ─────────────────────────────────────────────
 function getEditorFloorY() {
-  const sh = placedHolds.filter(h => h.type === 'start');
-  if (sh.length === 0) return null;
-  return Math.max(...sh.map(h => h.y)) + 80;
+  return getEditorMatY();
 }
 
 // ── 마우스 이벤트 ───────────────────────────────────────────
@@ -255,13 +256,12 @@ canvas.addEventListener("mousedown", e => {
   if (e.button !== 0) return;
 
   // 원숭이 드래그 체크 (홀드 이벤트보다 우선)
-  const floorY = getEditorFloorY();
-  if (floorY !== null) {
+  {
+    const floorY  = getEditorFloorY();
     const mx      = e.clientX - wrap.getBoundingClientRect().left;
     const my      = e.clientY - wrap.getBoundingClientRect().top + wrap.scrollTop;
     const monX    = monkeyX ?? canvas.width / 2;
-    const footWY  = floorY;
-    if (Math.abs(mx - monX) < 40 && my > footWY - 250 && my < footWY + 10) {
+    if (Math.abs(mx - monX) < 40 && my > floorY - 250 && my < floorY + 10) {
       isDraggingMonkey  = true;
       monkeyDragOffsetX = mx - monX;
       return;
@@ -695,11 +695,8 @@ function drawControls(h) {
 }
 
 function drawEditorFloor() {
-  const sh = placedHolds.filter(h => h.type === 'start');
-  if (sh.length === 0) return;
-
   const W      = canvas.width;
-  const floorY = Math.max(...sh.map(h => h.y)) + 80 - wrap.scrollTop;
+  const floorY = getEditorMatY() - wrap.scrollTop;
   const matH   = 28;
 
   if (floorY > wrap.clientHeight + 50 || floorY < -100) return;
@@ -768,12 +765,10 @@ function drawEditorFloor() {
 }
 
 function drawEditorMonkey() {
-  const floorY = getEditorFloorY();
-  if (floorY === null) return;
-
-  const x        = monkeyX ?? canvas.width / 2;
-  const screenY  = floorY - wrap.scrollTop;
-  const footY    = screenY;
+  const x       = monkeyX ?? canvas.width / 2;
+  const floorY  = getEditorMatY();
+  const screenY = floorY - wrap.scrollTop;
+  const footY   = screenY;
   const kneeY    = footY - 32;
   const hipY     = footY - 65;
   const shoulderY = footY - 185;

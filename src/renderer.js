@@ -89,16 +89,10 @@ export class Renderer {
   }
 
   // ── 바닥 (크래시패드) ────────────────────────────────────
-  drawFloor(scrollY, holds) {
-    const ctx = this.ctx;
-    const W   = this.canvas.width;
-
-    const startHolds   = holds.filter(h => h.type === 'start');
-    const lowestStartY = startHolds.length > 0
-      ? Math.max(...startHolds.map(h => h.y)) + 80
-      : this.canvas.height * 2 - 100;
-
-    const floorY = lowestStartY - scrollY;
+  drawFloor(scrollY, worldH) {
+    const ctx    = this.ctx;
+    const W      = this.canvas.width;
+    const floorY = (worldH - 60) - scrollY;
     if (floorY > window.innerHeight + 50) return;
     if (floorY < -100) return;
 

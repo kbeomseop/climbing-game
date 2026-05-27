@@ -21,6 +21,7 @@ let mouseMode     = false;
 
 // ── 월드 높이 (뷰포트 × 2.5) ─────────────────────────────
 let WORLD_H = window.innerHeight * 2.5;
+const getMatY = () => WORLD_H - 60;
 
 // ── 스크롤 ───────────────────────────────────────────────
 let scrollY       = 0;
@@ -162,22 +163,14 @@ document.addEventListener("click", e => {
   }
 });
 
-function getLowestStartY() {
-  const sh = holds.filter(h => h.type === "start");
-  return sh.length > 0
-    ? Math.max(...sh.map(h => h.y)) + 80
-    : canvas.height * 2 - 200;
-}
-
 function buildHolds() {
   holds         = createHolds(canvas.width, WORLD_H);
   climbingState = new ClimbingState(holds);
   startHolds    = holds.filter(h => h.type === "start").sort((a, b) => a.x - b.x);
   physics.reset();
 
-  // holds 설정 완료 후 getLowestStartY() 호출
-  const lowestY = getLowestStartY();
-  scrollY       = Math.max(0, lowestY - canvas.height * 0.75);
+  const matY    = getMatY();
+  scrollY       = Math.max(0, matY - canvas.height * 0.75);
   targetScrollY = scrollY;
 }
 
@@ -216,7 +209,7 @@ let wheelTimer     = null;
 window.addEventListener("wheel", e => {
   e.preventDefault();
   targetScrollY += e.deltaY * 0.8;
-  const minScroll = Math.max(0, getLowestStartY() - canvas.height * 0.80);
+  const minScroll = Math.max(0, getMatY() - canvas.height * 0.85);
   targetScrollY = Math.max(minScroll, targetScrollY);
   if (scrollMode === "follow") {
     scrollOverride = "free";
@@ -302,8 +295,8 @@ function loop(timestamp) {
   const rh = climbingState.rightHold;
 
   // ── 유효 손 위치 (월드 좌표) ──
-  const STAND_Y    = getLowestStartY();   // 매트 상단 = 발이 닿는 위치
-  const standHandY = STAND_Y - 120;
+  const MAT_Y      = getMatY();           // 월드 맨 아래 고정 매트 위치
+  const standHandY = MAT_Y - 358;
   const standCX    = startHolds.length > 0
     ? (startHolds[0].x + (startHolds[1]?.x ?? startHolds[0].x)) / 2
     : canvas.width / 2;
@@ -318,7 +311,7 @@ function loop(timestamp) {
     x: (effL.x + effR.x) / 2,
     y: (effL.y + effR.y) / 2 + 55 + 120,
   };
-  const footHolds = climbingState.getFootHolds(hipPos, STAND_Y);
+  const footHolds = climbingState.getFootHolds(hipPos, MAT_Y);
   const pose      = character.compute(effL, effR, footHolds);
 
   // ── 물리: 균형 체크 → 낙하 트리거 ──
@@ -337,8 +330,7 @@ function loop(timestamp) {
     physics.reset();
     climbingState.leftHold  = null;
     climbingState.rightHold = null;
-    const ls = getLowestStartY();
-    targetScrollY  = Math.max(0, ls - canvas.height * 0.80);
+    targetScrollY   = Math.max(0, getMatY() - canvas.height * 0.85);
     balanceCooldown = 2.0;
   }
 
@@ -353,7 +345,7 @@ function loop(timestamp) {
       targetScrollY = Math.max(0, charY - window.innerHeight * 0.85);
     }
     scrollY += (targetScrollY - scrollY) * 0.15;
-    const minScroll = Math.max(0, getLowestStartY() - canvas.height * 0.80);
+    const minScroll = Math.max(0, getMatY() - canvas.height * 0.85);
     scrollY = Math.max(minScroll, scrollY);
     targetScrollY = Math.max(minScroll, targetScrollY);
   }
@@ -373,7 +365,7 @@ function loop(timestamp) {
     }
   }
 
-  renderer.drawFloor(scrollY, holds);
+  renderer.drawFloor(scrollY, WORLD_H);
   renderer.drawHolds(holds, lh, rh, hoverHold, scrollY);
   renderer.drawCharacter(pose, scrollY, fallData, lh, rh);
   if (hands.length > 0) renderer.drawHandLandmarks(hands, scrollY);
