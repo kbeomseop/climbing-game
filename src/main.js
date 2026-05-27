@@ -3,6 +3,7 @@ import { createHolds, ClimbingState } from "./climbing.js";
 import { Character } from "./character.js";
 import { Renderer } from "./renderer.js";
 import { Physics } from "./physics.js";
+import { Ragdoll } from "./ragdoll.js";
 
 const video  = document.getElementById("webcam");
 const canvas = document.getElementById("canvas");
@@ -11,6 +12,7 @@ const tracker   = new HandTracker();
 const renderer  = new Renderer(canvas);
 const character = new Character();
 const physics   = new Physics();
+const ragdoll   = new Ragdoll();
 
 let holds         = [];
 let climbingState = null;
@@ -320,19 +322,26 @@ function loop(timestamp) {
     const balance = physics.checkBalance(pose);
     if (!balance.stable) {
       physics.triggerFall(pose);
+      ragdoll.activate(pose, getMatY());
+      ragdoll.onLand = () => {
+        physics.reset();
+        ragdoll.deactivate();
+        climbingState.leftHold  = null;
+        climbingState.rightHold = null;
+        character.smoothL     = null;
+        character.smoothR     = null;
+        character.smoothLFoot = null;
+        character.smoothRFoot = null;
+        targetScrollY   = Math.max(0, getMatY() - canvas.height * 0.85);
+        balanceCooldown = 2.0;
+      };
       balanceCooldown = 2.0;
     }
   }
 
   // ── 낙하 업데이트 ──
   const fallData = physics.updateFall(dt);
-  if (fallData?.done) {
-    physics.reset();
-    climbingState.leftHold  = null;
-    climbingState.rightHold = null;
-    targetScrollY   = Math.max(0, getMatY() - canvas.height * 0.85);
-    balanceCooldown = 2.0;
-  }
+  ragdoll.update(dt);
 
   // ── 카메라 팔로우 ──
   const effectiveMode = scrollOverride ?? scrollMode;
@@ -365,9 +374,12 @@ function loop(timestamp) {
     }
   }
 
+  const ragdollPose = ragdoll.getPose();
+  const renderPose  = ragdollPose ?? pose;
+
   renderer.drawFloor(scrollY, WORLD_H);
   renderer.drawHolds(holds, lh, rh, hoverHold, scrollY);
-  renderer.drawCharacter(pose, scrollY, fallData, lh, rh);
+  renderer.drawCharacter(renderPose, scrollY, ragdollPose ? { alpha:1, x:0, y:0 } : fallData, lh, rh);
   if (hands.length > 0) renderer.drawHandLandmarks(hands, scrollY);
   renderer.drawMouseCursors({ mouseMode, mouse, activeKey, lastKey });
   renderer.drawUI({ ready, lHold: lh, rHold: rh, startHolds, noCam, mouseMode });
