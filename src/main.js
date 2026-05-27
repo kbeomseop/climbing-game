@@ -319,7 +319,7 @@ function loop(timestamp) {
   // ── 물리: 균형 체크 → 낙하 트리거 ──
   if (balanceCooldown > 0) balanceCooldown -= dt;
   if (pose && !physics.fallState && (lh || rh) && balanceCooldown <= 0) {
-    const balance = physics.checkBalance(pose);
+    const balance = physics.checkBalance(pose, lh, rh);
     if (!balance.stable) {
       physics.triggerFall(pose);
       ragdoll.activate(pose, getMatY());
@@ -348,16 +348,18 @@ function loop(timestamp) {
   if (effectiveMode === "fixed") {
     scrollY = 0;
     targetScrollY = 0;
-  } else {
-    if (effectiveMode === "follow" && pose) {
-      const charY = pose.neck.y;
-      targetScrollY = Math.max(0, charY - window.innerHeight * 0.85);
-    }
-    scrollY += (targetScrollY - scrollY) * 0.15;
+  } else if (effectiveMode === "follow") {
+    const charY = (ragdollPose ?? pose)?.neck?.y ?? 0;
+    targetScrollY = charY - window.innerHeight * 0.35;
     const minScroll = Math.max(0, getMatY() - canvas.height * 0.85);
-    scrollY = Math.max(minScroll, scrollY);
+    targetScrollY = Math.max(minScroll, Math.max(0, targetScrollY));
+    scrollY += (targetScrollY - scrollY) * 0.1;
+  } else {
+    const minScroll = Math.max(0, getMatY() - canvas.height * 0.85);
     targetScrollY = Math.max(minScroll, targetScrollY);
+    scrollY += (targetScrollY - scrollY) * 0.15;
   }
+  scrollY = Math.max(0, scrollY);
 
   // ── 렌더링 ──
   renderer.scrollY = scrollY;

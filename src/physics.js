@@ -2,7 +2,7 @@ export class Physics {
   constructor() {
     this.maxReach         = 320
     this.snapRadius       = 55
-    this.balanceTolerance = 0.65
+    this.balanceTolerance = 0.42
     this.fallState        = null  // null | 'hanging' | 'falling'
     this.fallTimer        = 0
     this.fallX            = 0
@@ -16,7 +16,7 @@ export class Physics {
     return d <= this.maxReach
   }
 
-  checkBalance(pose) {
+  checkBalance(pose, lHold, rHold) {
     const cx = (
       pose.head.x   * 0.2 +
       pose.pelvis.x * 0.4 +
@@ -28,7 +28,9 @@ export class Physics {
     const baseX     = (pose.lHand.x + pose.rHand.x) / 2
     const span      = Math.max(Math.abs(pose.rHand.x - pose.lHand.x) + 80, 200)
     const deviation = Math.abs(cx - baseX) / span
-    return { stable: deviation <= this.balanceTolerance, centerX: cx, baseX, deviation }
+    const oneHand   = (lHold == null) !== (rHold == null)
+    const tol       = oneHand ? 0.28 : 0.42
+    return { stable: deviation <= tol, centerX: cx, baseX, deviation }
   }
 
   triggerFall(pose) {

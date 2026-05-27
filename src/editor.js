@@ -691,7 +691,7 @@ function drawControls(h) {
 
 function drawEditorFloor() {
   const W      = canvas.width;
-  const floorY = wrap.clientHeight - 80;
+  const floorY = wrap.scrollTop + wrap.clientHeight - 80;
   const matH   = 28;
 
   ctx.save();
@@ -759,7 +759,7 @@ function drawEditorFloor() {
 
 function drawEditorMonkey() {
   const x     = monkeyX ?? canvas.width / 2;
-  const footY = wrap.clientHeight - 80;
+  const footY = wrap.scrollTop + wrap.clientHeight - 80;
   const kneeY    = footY - 32;
   const hipY     = footY - 65;
   const shoulderY = footY - 185;
