@@ -34,7 +34,8 @@ let leftPos   = null;
 let rightPos  = null;
 
 // ── 타임스텝 ─────────────────────────────────────────────
-let lastTime = null;
+let lastTime        = null;
+let balanceCooldown = 0;
 
 // ── 현재 루트 ID ─────────────────────────────────────────
 let currentRouteId = null;
@@ -169,14 +170,14 @@ function getLowestStartY() {
 }
 
 function buildHolds() {
-  holds = createHolds(canvas.width, WORLD_H);
+  holds         = createHolds(canvas.width, WORLD_H);
   climbingState = new ClimbingState(holds);
-  startHolds = holds.filter(h => h.type === "start").sort((a, b) => a.x - b.x);
+  startHolds    = holds.filter(h => h.type === "start").sort((a, b) => a.x - b.x);
   physics.reset();
 
-  // 바닥이 보이는 위치로 카메라 초기화
-  const lowestStartY = getLowestStartY();
-  scrollY       = Math.max(0, lowestStartY - canvas.height * 0.75);
+  // holds 설정 완료 후 getLowestStartY() 호출
+  const lowestY = getLowestStartY();
+  scrollY       = Math.max(0, lowestY - canvas.height * 0.75);
   targetScrollY = scrollY;
 }
 
@@ -215,7 +216,8 @@ let wheelTimer     = null;
 window.addEventListener("wheel", e => {
   e.preventDefault();
   targetScrollY += e.deltaY * 0.8;
-  targetScrollY = Math.max(0, targetScrollY);
+  const minScroll = Math.max(0, getLowestStartY() - canvas.height * 0.80);
+  targetScrollY = Math.max(minScroll, targetScrollY);
   if (scrollMode === "follow") {
     scrollOverride = "free";
     clearTimeout(wheelTimer);
@@ -288,48 +290,58 @@ function loop(timestamp) {
 
   // ── hands 수집 ──
   let hands = [];
-  if (!mouseMode && !physics.fallState) {
-    tracker.detect(video);
-    hands = tracker.getHands(canvas.width, canvas.height);
-    climbingState.update(hands, canvas.width, physics, scrollY);
+  if (!physics.fallState) {
+    if (!mouseMode) {
+      tracker.detect(video);
+      hands = tracker.getHands(canvas.width, canvas.height);
+      climbingState.update(hands, canvas.width, physics, scrollY);
+    }
   }
 
   const lh = climbingState.leftHold;
   const rh = climbingState.rightHold;
 
   // ── 유효 손 위치 (월드 좌표) ──
-  const lowestStartY = getLowestStartY();
-  const defaultHandY = lowestStartY - 120;
+  const lowestStartY  = getLowestStartY();
+  const STAND_Y       = lowestStartY - 80;
+  const standCenterX  = canvas.width / 2;
   const effL = lh ?? (mouseMode && leftPos
     ? leftPos
     : startHolds[0]
     ? { x: startHolds[0].x, y: startHolds[0].y + 80 }
-    : { x: canvas.width * 0.35, y: defaultHandY });
+    : { x: standCenterX - 55, y: STAND_Y - 120 });
   const effR = rh ?? (mouseMode && rightPos
     ? rightPos
     : startHolds[1]
     ? { x: startHolds[1].x, y: startHolds[1].y + 80 }
-    : { x: canvas.width * 0.65, y: defaultHandY });
+    : { x: standCenterX + 55, y: STAND_Y - 120 });
 
   const hipPos = {
     x: (effL.x + effR.x) / 2,
     y: (effL.y + effR.y) / 2 + 55 + 120,
   };
-  const footHolds = climbingState.getFootHolds(hipPos);
+  const footHolds = climbingState.getFootHolds(hipPos, STAND_Y);
   const pose      = character.compute(effL, effR, footHolds);
 
   // ── 물리: 균형 체크 → 낙하 트리거 ──
-  if (pose && !physics.fallState && (lh || rh)) {
+  if (balanceCooldown > 0) balanceCooldown -= dt;
+  if (pose && !physics.fallState && (lh || rh) && balanceCooldown <= 0) {
     const balance = physics.checkBalance(pose);
-    if (!balance.stable) physics.triggerFall(pose);
+    if (!balance.stable) {
+      physics.triggerFall(pose);
+      balanceCooldown = 2.0;
+    }
   }
 
   // ── 낙하 업데이트 ──
   const fallData = physics.updateFall(dt);
   if (fallData?.done) {
     physics.reset();
-    climbingState.leftHold  = startHolds[0] ?? holds[0] ?? null;
-    climbingState.rightHold = startHolds[1] ?? holds[1] ?? null;
+    climbingState.leftHold  = null;
+    climbingState.rightHold = null;
+    const ls = getLowestStartY();
+    targetScrollY  = Math.max(0, ls - canvas.height * 0.80);
+    balanceCooldown = 2.0;
   }
 
   // ── 카메라 팔로우 ──
@@ -343,8 +355,9 @@ function loop(timestamp) {
       targetScrollY = Math.max(0, charY - window.innerHeight * 0.85);
     }
     scrollY += (targetScrollY - scrollY) * 0.15;
-    const minScrollY = getLowestStartY() - canvas.height * 0.85;
-    scrollY = Math.max(minScrollY, scrollY);
+    const minScroll = Math.max(0, getLowestStartY() - canvas.height * 0.80);
+    scrollY = Math.max(minScroll, scrollY);
+    targetScrollY = Math.max(minScroll, targetScrollY);
   }
 
   // ── 렌더링 ──

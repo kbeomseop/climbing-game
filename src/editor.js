@@ -77,6 +77,11 @@ let pendingPlace  = null;   // mouseup 시 배치할 좌표
 let hasDragged    = false;
 let mousedownPos  = null;
 
+// ── 원숭이 상태 ─────────────────────────────────────────────
+let monkeyX            = null;   // null → 캔버스 중앙
+let isDraggingMonkey   = false;
+let monkeyDragOffsetX  = 0;
+
 // ── 캔버스 크기 (높이 = 뷰포트 × 2.5) ──────────────────────
 function resize() {
   canvas.width  = wrap.clientWidth;
@@ -98,6 +103,7 @@ setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 0);
         placedHolds    = route.holds.map(h => ({ scale: 1, rotation: 0, ...h }));
         nextId         = Math.max(...placedHolds.map(h => h.id)) + 1;
         currentRouteId = route.id;
+        monkeyX        = route.monkeyX ?? null;
         if (route.scrollMode) {
           const sm = document.getElementById("scroll-mode");
           if (sm) sm.value = route.scrollMode;
@@ -229,9 +235,31 @@ function getHoldAt(x, y) {
 
 const d2 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
+// ── 원숭이 헬퍼 ─────────────────────────────────────────────
+function getEditorFloorY() {
+  const sh = placedHolds.filter(h => h.type === 'start');
+  if (sh.length === 0) return null;
+  return Math.max(...sh.map(h => h.y)) + 80;
+}
+
 // ── 마우스 이벤트 ───────────────────────────────────────────
 canvas.addEventListener("mousedown", e => {
   if (e.button !== 0) return;
+
+  // 원숭이 드래그 체크 (홀드 이벤트보다 우선)
+  const floorY = getEditorFloorY();
+  if (floorY !== null) {
+    const mx      = e.clientX - wrap.getBoundingClientRect().left;
+    const my      = e.clientY - wrap.getBoundingClientRect().top + wrap.scrollTop;
+    const monX    = monkeyX ?? canvas.width / 2;
+    const footWY  = floorY;
+    if (Math.abs(mx - monX) < 40 && my > footWY - 250 && my < footWY + 10) {
+      isDraggingMonkey  = true;
+      monkeyDragOffsetX = mx - monX;
+      return;
+    }
+  }
+
   const pos = getPos(e);
   mousedownPos  = pos;
   hasDragged    = false;
@@ -286,6 +314,12 @@ canvas.addEventListener("mousedown", e => {
 });
 
 canvas.addEventListener("mousemove", e => {
+  if (isDraggingMonkey) {
+    const mx = e.clientX - wrap.getBoundingClientRect().left;
+    monkeyX  = Math.max(50, Math.min(canvas.width - 50, mx - monkeyDragOffsetX));
+    return;
+  }
+
   const pos = getPos(e);
   if (mousedownPos && Math.hypot(pos.x - mousedownPos.x, pos.y - mousedownPos.y) > 5) {
     hasDragged = true;
@@ -321,6 +355,7 @@ canvas.addEventListener("mousemove", e => {
 });
 
 canvas.addEventListener("mouseup", e => {
+  if (isDraggingMonkey) { isDraggingMonkey = false; return; }
   if (e.button !== 0) return;
   if (!hasDragged) {
     if (pendingSelect) {
@@ -453,6 +488,7 @@ function renderSidebar() {
       nextId         = placedHolds.length > 0 ? Math.max(...placedHolds.map(h => h.id)) + 1 : 0;
       selectedHold   = null;
       currentRouteId = route.id;
+      monkeyX        = route.monkeyX ?? null;
       localStorage.setItem("climbingRoute", JSON.stringify(holds2));
       localStorage.setItem("lastRouteId",   route.id);
       if (route.scrollMode) {
@@ -480,7 +516,7 @@ document.getElementById("scroll-mode").addEventListener("change", e => {
 
 // 사이드바 새 루트 버튼
 document.getElementById("btn-sidebar-new").addEventListener("click", () => {
-  placedHolds = []; nextId = 0; selectedHold = null; currentRouteId = null;
+  placedHolds = []; nextId = 0; selectedHold = null; currentRouteId = null; monkeyX = null;
   localStorage.removeItem("lastRouteId");
   renderSidebar();
   wrap.scrollTop = wrap.scrollHeight;
@@ -494,9 +530,10 @@ document.getElementById("btn-save").addEventListener("click", () => {
     const id    = currentRouteId || `route_${Date.now()}`;
     const route = {
       id, name,
-      createdAt: Date.now(),
-      holds: placedHolds,
+      createdAt:  Date.now(),
+      holds:      placedHolds,
       scrollMode: localStorage.getItem("routeScrollMode") || "follow",
+      monkeyX:    monkeyX,
     };
     const idx = routes.findIndex(r => r.id === id);
     if (idx >= 0) routes[idx] = route; else routes.push(route);
@@ -511,7 +548,7 @@ document.getElementById("btn-play").addEventListener("click", () => {
   window.location.href = "/";
 });
 document.getElementById("btn-reset").addEventListener("click", () => {
-  placedHolds = []; nextId = 0; selectedHold = null; currentRouteId = null;
+  placedHolds = []; nextId = 0; selectedHold = null; currentRouteId = null; monkeyX = null;
   localStorage.removeItem("lastRouteId");
   renderSidebar();
   wrap.scrollTop = wrap.scrollHeight;
@@ -649,11 +686,199 @@ function drawControls(h) {
   }
 }
 
+function drawEditorFloor() {
+  const sh = placedHolds.filter(h => h.type === 'start');
+  if (sh.length === 0) return;
+
+  const W      = canvas.width;
+  const floorY = Math.max(...sh.map(h => h.y)) + 80 - wrap.scrollTop;
+  const matH   = 28;
+
+  if (floorY > canvas.height + 50 || floorY < -100) return;
+
+  ctx.save();
+
+  ctx.beginPath();
+  ctx.moveTo(0, floorY - 4);
+  ctx.lineTo(W, floorY - 4);
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.roundRect(W * 0.05, floorY, W * 0.9, matH, 12);
+  ctx.fillStyle = '#3d2a1a';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.roundRect(W * 0.05 + 3, floorY + 3, W * 0.9 - 6, matH - 6, 9);
+  ctx.fillStyle = '#c8855a';
+  ctx.globalAlpha = 0.75;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  const sections = 5;
+  for (let i = 1; i < sections; i++) {
+    const sx = W * 0.05 + 3 + (W * 0.9 - 6) * (i / sections);
+    ctx.beginPath();
+    ctx.moveTo(sx, floorY + 4);
+    ctx.lineTo(sx, floorY + matH - 4);
+    ctx.strokeStyle = 'rgba(160,96,53,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  ctx.beginPath();
+  ctx.roundRect(W * 0.05 + 3, floorY + 3, W * 0.9 - 6, 6, [9, 9, 0, 0]);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.rect(0, floorY + matH, W, 20);
+  ctx.fillStyle = '#111118';
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < W; x += 20) {
+    ctx.beginPath();
+    ctx.moveTo(x, floorY + matH);
+    ctx.lineTo(x, floorY + matH + 20);
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.moveTo(0, floorY + matH + 10);
+  ctx.lineTo(W, floorY + matH + 10);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.rect(0, floorY + matH + 20, W, 9999);
+  ctx.fillStyle = '#0a0a14';
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawEditorMonkey() {
+  const floorY = getEditorFloorY();
+  if (floorY === null) return;
+
+  const x        = monkeyX ?? canvas.width / 2;
+  const screenY  = floorY - wrap.scrollTop;
+  const footY    = screenY;
+  const kneeY    = footY - 32;
+  const hipY     = footY - 65;
+  const shoulderY = footY - 185;
+  const neckY    = footY - 195;
+  const headY    = footY - 220;
+
+  const bone = (ax, ay, bx, by, w, color) => {
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by);
+    ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.stroke();
+    ctx.restore();
+  };
+  const circ = (cx, cy, r, color) => {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.restore();
+  };
+
+  // 꼬리
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(x + 18, hipY);
+  ctx.bezierCurveTo(x + 55, hipY + 20, x + 58, hipY + 50, x + 40, hipY + 55);
+  ctx.strokeStyle = '#b07040'; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.stroke();
+  ctx.restore();
+
+  // 다리
+  bone(x - 8,  hipY, x - 14, kneeY, 10, '#b07040');
+  bone(x - 14, kneeY, x - 10, footY,  9, '#b07040');
+  bone(x + 8,  hipY, x + 14, kneeY, 10, '#b07040');
+  bone(x + 14, kneeY, x + 10, footY,  9, '#b07040');
+
+  // 발
+  ctx.save();
+  ctx.beginPath(); ctx.ellipse(x - 10, footY, 12, 7, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#b07040'; ctx.fill(); ctx.restore();
+  ctx.save();
+  ctx.beginPath(); ctx.ellipse(x + 10, footY, 12, 7, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#b07040'; ctx.fill(); ctx.restore();
+
+  // 몸통
+  ctx.save();
+  ctx.beginPath(); ctx.ellipse(x, shoulderY + 60, 22, 30, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#c8855a'; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x, shoulderY + 65, 13, 20, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#e8b48a'; ctx.fill();
+  ctx.restore();
+
+  // 팔
+  bone(x - 18, shoulderY, x - 42, shoulderY + 45, 9, '#c8855a');
+  bone(x - 42, shoulderY + 45, x - 44, shoulderY + 85, 8, '#c8855a');
+  bone(x + 18, shoulderY, x + 42, shoulderY + 45, 9, '#c8855a');
+  bone(x + 42, shoulderY + 45, x + 44, shoulderY + 85, 8, '#c8855a');
+
+  // 손
+  circ(x - 44, shoulderY + 87, 9, '#c8855a');
+  circ(x + 44, shoulderY + 87, 9, '#c8855a');
+
+  // 관절
+  circ(x - 42, shoulderY + 45, 5, '#d4956a');
+  circ(x + 42, shoulderY + 45, 5, '#d4956a');
+  circ(x - 14, kneeY, 5, '#9a6035');
+  circ(x + 14, kneeY, 5, '#9a6035');
+
+  // 목
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(x - 8, neckY, 16, 14, 6);
+  ctx.fillStyle = '#c8855a'; ctx.fill(); ctx.restore();
+
+  // 귀
+  circ(x - 26, headY + 10, 10, '#c8855a');
+  circ(x - 26, headY + 10,  6, '#e8b48a');
+  circ(x + 26, headY + 10, 10, '#c8855a');
+  circ(x + 26, headY + 10,  6, '#e8b48a');
+  // 머리
+  circ(x, headY + 10, 30, '#c8855a');
+  // 주둥이
+  ctx.save();
+  ctx.beginPath(); ctx.ellipse(x, headY + 22, 16, 12, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#e8b48a'; ctx.fill(); ctx.restore();
+  // 눈
+  circ(x - 10, headY + 4, 6, '#fff');
+  circ(x + 10, headY + 4, 6, '#fff');
+  circ(x - 9,  headY + 5, 3.5, '#2a1a0a');
+  circ(x + 11, headY + 5, 3.5, '#2a1a0a');
+  circ(x - 7,  headY + 2, 1.5, '#fff');
+  circ(x + 13, headY + 2, 1.5, '#fff');
+  // 코
+  ctx.save();
+  ctx.beginPath(); ctx.ellipse(x, headY + 16, 4, 3, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#a06040'; ctx.fill(); ctx.restore();
+  // 웃는 입
+  ctx.save();
+  ctx.beginPath(); ctx.arc(x, headY + 20, 8, 0.2, Math.PI - 0.2);
+  ctx.strokeStyle = '#7a4030'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.stroke();
+  ctx.restore();
+
+  // 드래그 핸들
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,159,67,0.6)';
+  ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('⟺', x, footY + 18);
+  ctx.restore();
+}
+
 function render() {
   requestAnimationFrame(render);
   ctx.fillStyle = "#0a0a14";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   drawGrid();
+  drawEditorFloor();
+  drawEditorMonkey();
   for (const h of placedHolds) drawHold(h);
 }
 

@@ -60,13 +60,19 @@ export class ClimbingState {
   }
 
   // Returns [leftFoot, rightFoot] — nearest holds below hipPos
-  getFootHolds(hipPos) {
+  getFootHolds(hipPos, floorY = null) {
     const below = this.holds
       .filter((h) => h.y > hipPos.y)
       .sort((a, b) => dist(hipPos, a) - dist(hipPos, b))
       .slice(0, 2);
 
-    if (below.length === 0) return [null, null];
+    if (below.length === 0) {
+      const fy = floorY ?? hipPos.y + 183;
+      return [
+        { x: hipPos.x - 20, y: fy },
+        { x: hipPos.x + 20, y: fy },
+      ];
+    }
     if (below.length === 1) return [below[0], below[0]];
     return below[0].x < below[1].x ? [below[0], below[1]] : [below[1], below[0]];
   }
