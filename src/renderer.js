@@ -604,7 +604,7 @@ export class Renderer {
       ctx.font      = "400 12px 'Poppins', sans-serif";
       ctx.fillStyle = "rgba(255,255,255,0.3)";
       ctx.textAlign = "center";
-      ctx.fillText("A = 왼손  |  D = 오른손  |  클릭 = 확정", this.canvas.width / 2, this.canvas.height - 28);
+      ctx.fillText("클릭 = 홀드 잡기  |  A키+클릭 = 왼손  |  D키+클릭 = 오른손", this.canvas.width / 2, this.canvas.height - 28);
     } else {
       // 카메라 모드 홀드 상태
       ctx.font = "400 12px 'Poppins', sans-serif";

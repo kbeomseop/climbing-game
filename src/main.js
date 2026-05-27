@@ -260,8 +260,16 @@ canvas.addEventListener("click", e => {
     if (d < nd) { nearest = h; nd = d; }
   }
   if (nearest && nd < 70) {
+    const prevL = climbingState.leftHold;
+    const prevR = climbingState.rightHold;
     if (isLeft) climbingState.leftHold  = nearest;
     else        climbingState.rightHold = nearest;
+    if (isLeft && climbingState.leftHold !== prevL) {
+      physicsEngine.grip('left', { x: nearest.x, y: nearest.y });
+    }
+    if (!isLeft && climbingState.rightHold !== prevR) {
+      physicsEngine.grip('right', { x: nearest.x, y: nearest.y });
+    }
   }
 });
 
@@ -287,24 +295,27 @@ function loop(timestamp) {
   let hands = [];
   const prevLH = climbingState.leftHold;
   const prevRH = climbingState.rightHold;
-  if (!mouseMode) {
-    tracker.detect(video);
-    hands = tracker.getHands(canvas.width, canvas.height);
-    climbingState.update(hands, canvas.width, null, scrollY);
+  if (!physicsEngine.isFalling()) {
+    if (!mouseMode) {
+      tracker.detect(video);
+      hands = tracker.getHands(canvas.width, canvas.height);
+      climbingState.update(hands, canvas.width, null, scrollY);
+      // 핸드트래킹 그립 변경 감지
+      const lh_ = climbingState.leftHold;
+      const rh_ = climbingState.rightHold;
+      if (lh_ !== prevLH) {
+        if (lh_) physicsEngine.grip('left',  { x: lh_.x, y: lh_.y });
+        else     physicsEngine.release('left');
+      }
+      if (rh_ !== prevRH) {
+        if (rh_) physicsEngine.grip('right', { x: rh_.x, y: rh_.y });
+        else     physicsEngine.release('right');
+      }
+    }
   }
 
   const lh = climbingState.leftHold;
   const rh = climbingState.rightHold;
-
-  // ── 그립 변경 감지 → Matter.js 그립 적용 ──
-  if (lh !== prevLH) {
-    if (lh) physicsEngine.grip('left',  { x: lh.x, y: lh.y });
-    else    physicsEngine.release('left');
-  }
-  if (rh !== prevRH) {
-    if (rh) physicsEngine.grip('right', { x: rh.x, y: rh.y });
-    else    physicsEngine.release('right');
-  }
 
   // ── standCX 계산 ──
   const MAT_Y   = getMatY();
