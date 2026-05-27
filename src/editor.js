@@ -90,17 +90,11 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 
-const getEditorMatY = () => canvas.height - 60;
+const getEditorMatY = () => wrap.scrollTop + wrap.clientHeight - 80;
 
 setTimeout(() => {
-  const matY = getEditorMatY();
-  wrap.scrollTop = Math.max(0, matY - wrap.clientHeight * 0.75);
+  wrap.scrollTop = wrap.scrollHeight - wrap.clientHeight;
 }, 50);
-
-wrap.addEventListener('scroll', () => {
-  const minScroll = Math.max(0, getEditorMatY() - wrap.clientHeight * 0.85);
-  if (wrap.scrollTop < minScroll) wrap.scrollTop = minScroll;
-});
 
 // ── localStorage 로드 ───────────────────────────────────────
 {
@@ -527,7 +521,7 @@ document.getElementById("btn-sidebar-new").addEventListener("click", () => {
   placedHolds = []; nextId = 0; selectedHold = null; currentRouteId = null; monkeyX = null;
   localStorage.removeItem("lastRouteId");
   renderSidebar();
-  wrap.scrollTop = wrap.scrollHeight;
+  wrap.scrollTop = wrap.scrollHeight - wrap.clientHeight;
 });
 
 // ── 버튼 ────────────────────────────────────────────────────
@@ -559,7 +553,7 @@ document.getElementById("btn-reset").addEventListener("click", () => {
   placedHolds = []; nextId = 0; selectedHold = null; currentRouteId = null; monkeyX = null;
   localStorage.removeItem("lastRouteId");
   renderSidebar();
-  wrap.scrollTop = wrap.scrollHeight;
+  wrap.scrollTop = wrap.scrollHeight - wrap.clientHeight;
 });
 
 // 초기 사이드바 렌더
@@ -697,10 +691,8 @@ function drawControls(h) {
 
 function drawEditorFloor() {
   const W      = canvas.width;
-  const floorY = getEditorMatY() - wrap.scrollTop;
+  const floorY = wrap.clientHeight - 80;
   const matH   = 28;
-
-  if (floorY > wrap.clientHeight + 50 || floorY < -100) return;
 
   ctx.save();
 
@@ -766,10 +758,8 @@ function drawEditorFloor() {
 }
 
 function drawEditorMonkey() {
-  const x       = monkeyX ?? canvas.width / 2;
-  const floorY  = getEditorMatY();
-  const screenY = floorY - wrap.scrollTop;
-  const footY   = screenY;
+  const x     = monkeyX ?? canvas.width / 2;
+  const footY = wrap.clientHeight - 80;
   const kneeY    = footY - 32;
   const hipY     = footY - 65;
   const shoulderY = footY - 185;
