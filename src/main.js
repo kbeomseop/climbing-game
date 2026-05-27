@@ -2,15 +2,15 @@ import { HandTracker } from "./handTracker.js";
 import { createHolds, ClimbingState } from "./climbing.js";
 import { Character } from "./character.js";
 import { Renderer } from "./renderer.js";
-import { Physics } from "./physics.js";
+import { PhysicsEngine } from "./physicsEngine.js";
 
 const video  = document.getElementById("webcam");
 const canvas = document.getElementById("canvas");
 
-const tracker   = new HandTracker();
-const renderer  = new Renderer(canvas);
-const character = new Character();
-const physics   = new Physics();
+const tracker       = new HandTracker();
+const renderer      = new Renderer(canvas);
+const character     = new Character();
+const physicsEngine = new PhysicsEngine();
 
 let holds         = [];
 let climbingState = null;
@@ -35,8 +35,7 @@ let leftPos   = null;
 let rightPos  = null;
 
 // ── 타임스텝 ─────────────────────────────────────────────
-let lastTime        = null;
-let balanceCooldown = 0;
+let lastTime = null;
 
 // ── 현재 루트 ID ─────────────────────────────────────────
 let currentRouteId = null;
@@ -127,7 +126,6 @@ function renderRoutePanel() {
       loadRouteById(route.id);
       buildHolds();
       leftPos = null; rightPos = null;
-      physics.reset();
       if (climbingState) { climbingState.leftHold = null; climbingState.rightHold = null; }
       renderRoutePanel();
       closeRoutePanel();
@@ -167,11 +165,14 @@ function buildHolds() {
   holds         = createHolds(canvas.width, WORLD_H);
   climbingState = new ClimbingState(holds);
   startHolds    = holds.filter(h => h.type === "start").sort((a, b) => a.x - b.x);
-  physics.reset();
 
   const matY    = getMatY();
   scrollY       = Math.max(0, matY - canvas.height * 0.75);
   targetScrollY = scrollY;
+
+  const initCX = canvas.width / 2;
+  const initCY = getMatY() - 300;
+  physicsEngine.init(initCX, initCY);
 }
 
 async function initWebcam() {
@@ -281,57 +282,49 @@ function loop(timestamp) {
     return;
   }
 
+  // ── Matter.js 물리 업데이트 ──
+  physicsEngine.update(dt);
+
   // ── hands 수집 ──
   let hands = [];
-  if (!physics.fallState) {
-    if (!mouseMode) {
-      tracker.detect(video);
-      hands = tracker.getHands(canvas.width, canvas.height);
-      climbingState.update(hands, canvas.width, physics, scrollY);
-    }
+  const prevLH = climbingState.leftHold;
+  const prevRH = climbingState.rightHold;
+  if (!mouseMode) {
+    tracker.detect(video);
+    hands = tracker.getHands(canvas.width, canvas.height);
+    climbingState.update(hands, canvas.width, null, scrollY);
   }
 
   const lh = climbingState.leftHold;
   const rh = climbingState.rightHold;
 
-  // ── 유효 손 위치 (월드 좌표) ──
-  const MAT_Y      = getMatY();           // 월드 맨 아래 고정 매트 위치
-  const standHandY = MAT_Y - 358;
-  const standCX    = startHolds.length > 0
-    ? (startHolds[0].x + (startHolds[1]?.x ?? startHolds[0].x)) / 2
-    : canvas.width / 2;
-  const effL = lh ?? (mouseMode && leftPos
-    ? leftPos
-    : { x: standCX - 55, y: standHandY });
-  const effR = rh ?? (mouseMode && rightPos
-    ? rightPos
-    : { x: standCX + 55, y: standHandY });
-
-  const hipPos = {
-    x: (effL.x + effR.x) / 2,
-    y: (effL.y + effR.y) / 2 + 55 + 120,
-  };
-  const footHolds = climbingState.getFootHolds(hipPos, MAT_Y);
-  const pose      = character.compute(effL, effR, footHolds);
-
-  // ── 물리: 균형 체크 → 낙하 트리거 ──
-  if (balanceCooldown > 0) balanceCooldown -= dt;
-  if (pose && !physics.fallState && (lh || rh) && balanceCooldown <= 0) {
-    const balance = physics.checkBalance(pose);
-    if (!balance.stable) {
-      physics.triggerFall(pose);
-      balanceCooldown = 2.0;
-    }
+  // ── 그립 변경 감지 → Matter.js 그립 적용 ──
+  if (lh !== prevLH) {
+    if (lh) physicsEngine.grip('left',  { x: lh.x, y: lh.y });
+    else    physicsEngine.release('left');
+  }
+  if (rh !== prevRH) {
+    if (rh) physicsEngine.grip('right', { x: rh.x, y: rh.y });
+    else    physicsEngine.release('right');
   }
 
-  // ── 낙하 업데이트 ──
-  const fallData = physics.updateFall(dt);
-  if (fallData?.done) {
-    physics.reset();
-    climbingState.leftHold  = null;
-    climbingState.rightHold = null;
-    targetScrollY   = Math.max(0, getMatY() - canvas.height * 0.85);
-    balanceCooldown = 2.0;
+  // ── standCX 계산 ──
+  const MAT_Y   = getMatY();
+  const standCX = startHolds.length > 0
+    ? (startHolds[0].x + (startHolds[1]?.x ?? startHolds[0].x)) / 2
+    : canvas.width / 2;
+
+  // ── pose를 Matter.js에서 가져옴 ──
+  const pose = physicsEngine.getPose();
+
+  // ── 낙하 감지 → 리셋 ──
+  if (physicsEngine.isFalling() && !lh && !rh && !physicsEngine._fallTimer) {
+    physicsEngine._fallTimer = setTimeout(() => {
+      climbingState.leftHold  = null;
+      climbingState.rightHold = null;
+      physicsEngine.reset(standCX, getMatY() - 300);
+      targetScrollY = Math.max(0, getMatY() - canvas.height * 0.85);
+    }, 2000);
   }
 
   // ── 카메라 팔로우 ──
@@ -367,7 +360,7 @@ function loop(timestamp) {
 
   renderer.drawFloor(scrollY, WORLD_H);
   renderer.drawHolds(holds, lh, rh, hoverHold, scrollY);
-  renderer.drawCharacter(pose, scrollY, fallData, lh, rh);
+  renderer.drawCharacter(pose, scrollY, null, lh, rh);
   if (hands.length > 0) renderer.drawHandLandmarks(hands, scrollY);
   renderer.drawMouseCursors({ mouseMode, mouse, activeKey, lastKey });
   renderer.drawUI({ ready, lHold: lh, rHold: rh, startHolds, noCam, mouseMode });
