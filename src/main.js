@@ -170,9 +170,7 @@ function buildHolds() {
   scrollY       = Math.max(0, matY - canvas.height * 0.75);
   targetScrollY = scrollY;
 
-  const initCX = canvas.width / 2;
-  const initCY = getMatY() - 300;
-  physicsEngine.init(initCX, initCY, getMatY());
+  physicsEngine.init(canvas.width / 2, 0, getMatY());
 }
 
 async function initWebcam() {

@@ -27,18 +27,26 @@ export class PhysicsEngine {
     this.joints = []
     this.grips  = {}
 
-    const opt = { frictionAir: 0.15, friction: 0.5, restitution: 0.0, collisionFilter: { category: 0x0001, mask: 0x0002 } }
+    const opt = { frictionAir: 0.4, friction: 0.5, restitution: 0.0, collisionFilter: { category: 0x0001, mask: 0x0002 } }
     const B = (x, y, w, h, label) => Bodies.rectangle(x, y, w, h, { ...opt, label })
 
-    const torso  = B(cx, cy, SW + 10, TORSO, 'torso')
-    const uArmL  = B(cx - SW/2 - UA/2, cy - TORSO/2 + 20, UA, 10, 'uArmL')
-    const uArmR  = B(cx + SW/2 + UA/2, cy - TORSO/2 + 20, UA, 10, 'uArmR')
-    const fArmL  = B(cx - SW/2 - UA - FA/2, cy - TORSO/2 + 20, FA, 8, 'fArmL')
-    const fArmR  = B(cx + SW/2 + UA + FA/2, cy - TORSO/2 + 20, FA, 8, 'fArmR')
-    const thighL = B(cx - HW/2, cy + TORSO/2 + TH/2, 10, TH, 'thighL')
-    const thighR = B(cx + HW/2, cy + TORSO/2 + TH/2, 10, TH, 'thighR')
-    const shinL  = B(cx - HW/2, cy + TORSO/2 + TH + SH/2, 8, SH, 'shinL')
-    const shinR  = B(cx + HW/2, cy + TORSO/2 + TH + SH/2, 8, SH, 'shinR')
+    const footY     = matY - 5
+    const kneeY     = footY    - SH
+    const hipY      = kneeY    - TH
+    const torsoY    = hipY     - TORSO/2
+    const shoulderY = hipY     - TORSO
+    const handY     = shoulderY + 80
+    const elbowY    = shoulderY + 40
+
+    const torso  = B(cx,                       torsoY,       SW+10, TORSO, 'torso')
+    const uArmL  = B(cx - SW/2 - UA/2,         elbowY,       UA,    10,    'uArmL')
+    const uArmR  = B(cx + SW/2 + UA/2,         elbowY,       UA,    10,    'uArmR')
+    const fArmL  = B(cx - SW/2 - UA - FA/2,    handY,        FA,    8,     'fArmL')
+    const fArmR  = B(cx + SW/2 + UA + FA/2,    handY,        FA,    8,     'fArmR')
+    const thighL = B(cx - HW/2,                hipY + TH/2,  10,    TH,    'thighL')
+    const thighR = B(cx + HW/2,                hipY + TH/2,  10,    TH,    'thighR')
+    const shinL  = B(cx - HW/2,                kneeY + SH/2, 8,     SH,    'shinL')
+    const shinR  = B(cx + HW/2,                kneeY + SH/2, 8,     SH,    'shinR')
 
     const ground = Bodies.rectangle(cx, matY + 25, 10000, 50, {
       isStatic: true,
@@ -54,7 +62,7 @@ export class PhysicsEngine {
     const J = (bA, pA, bB, pB) => Constraint.create({
       bodyA: bA, pointA: pA,
       bodyB: bB, pointB: pB,
-      stiffness: 0.8, length: 0, damping: 0.1,
+      stiffness: 0.98, length: 2, damping: 0.3,
     })
 
     this.joints = [
@@ -67,6 +75,19 @@ export class PhysicsEngine {
       J(thighL, { x: 0,     y:  TH/2 },       shinL,  { x: 0, y: -SH/2 }),
       J(thighR, { x: 0,     y:  TH/2 },       shinR,  { x: 0, y: -SH/2 }),
     ]
+
+    const kneeLimitL = Constraint.create({
+      bodyA: thighL, pointA: { x: 0, y: TH/2 },
+      bodyB: shinL,  pointB: { x: 0, y: -SH/2 },
+      stiffness: 0.98, length: 2, damping: 0.3,
+    })
+    const kneeLimitR = Constraint.create({
+      bodyA: thighR, pointA: { x: 0, y: TH/2 },
+      bodyB: shinR,  pointB: { x: 0, y: -SH/2 },
+      stiffness: 0.98, length: 2, damping: 0.3,
+    })
+    this.joints.push(kneeLimitL, kneeLimitR)
+
     World.add(this.world, this.joints)
     this.running = true
   }
