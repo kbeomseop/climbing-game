@@ -89,7 +89,15 @@ function resize() {
 }
 window.addEventListener("resize", resize);
 resize();
-setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 0);
+setTimeout(() => {
+  const sh = placedHolds.filter(h => h.type === 'start');
+  if (sh.length > 0) {
+    const lowestY = Math.max(...sh.map(h => h.y)) + 80;
+    wrap.scrollTop = Math.max(0, lowestY - wrap.clientHeight * 0.8);
+  } else {
+    wrap.scrollTop = 0;
+  }
+}, 50);
 
 // ── localStorage 로드 ───────────────────────────────────────
 {
@@ -694,7 +702,7 @@ function drawEditorFloor() {
   const floorY = Math.max(...sh.map(h => h.y)) + 80 - wrap.scrollTop;
   const matH   = 28;
 
-  if (floorY > canvas.height + 50 || floorY < -100) return;
+  if (floorY > wrap.clientHeight + 50 || floorY < -100) return;
 
   ctx.save();
 

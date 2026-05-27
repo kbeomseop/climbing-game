@@ -99,7 +99,7 @@ export class Renderer {
       : this.canvas.height * 2 - 100;
 
     const floorY = lowestStartY - scrollY;
-    if (floorY > this.canvas.height + 50) return;
+    if (floorY > window.innerHeight + 50) return;
     if (floorY < -100) return;
 
     ctx.save();

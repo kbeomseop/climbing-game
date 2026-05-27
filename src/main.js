@@ -302,19 +302,17 @@ function loop(timestamp) {
   const rh = climbingState.rightHold;
 
   // ── 유효 손 위치 (월드 좌표) ──
-  const lowestStartY  = getLowestStartY();
-  const STAND_Y       = lowestStartY - 80;
-  const standCenterX  = canvas.width / 2;
+  const STAND_Y    = getLowestStartY();   // 매트 상단 = 발이 닿는 위치
+  const standHandY = STAND_Y - 120;
+  const standCX    = startHolds.length > 0
+    ? (startHolds[0].x + (startHolds[1]?.x ?? startHolds[0].x)) / 2
+    : canvas.width / 2;
   const effL = lh ?? (mouseMode && leftPos
     ? leftPos
-    : startHolds[0]
-    ? { x: startHolds[0].x, y: startHolds[0].y + 80 }
-    : { x: standCenterX - 55, y: STAND_Y - 120 });
+    : { x: standCX - 55, y: standHandY });
   const effR = rh ?? (mouseMode && rightPos
     ? rightPos
-    : startHolds[1]
-    ? { x: startHolds[1].x, y: startHolds[1].y + 80 }
-    : { x: standCenterX + 55, y: STAND_Y - 120 });
+    : { x: standCX + 55, y: standHandY });
 
   const hipPos = {
     x: (effL.x + effR.x) / 2,
