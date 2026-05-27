@@ -33,55 +33,84 @@ function clampTarget(origin, target, maxDist) {
 
 export class Character {
   constructor() {
-    this.UA = 90;      // upper arm length
-    this.FA = 85;      // forearm length
-    this.TH = 95;      // thigh length
-    this.SH = 88;      // shin length
-    this.TORSO = 120;  // torso length
+    this.UA = 90;
+    this.FA = 85;
+    this.TH = 95;
+    this.SH = 88;
+    this.TORSO = 120;
     this.HEAD_R = 22;
-    this.SW = 62;      // shoulder width
-    this.HW = 46;      // hip width
+    this.SW = 62;
+    this.HW = 46;
+
+    this.smoothL     = null;
+    this.smoothR     = null;
+    this.smoothLFoot = null;
+    this.smoothRFoot = null;
   }
 
   compute(lHold, rHold, footHolds) {
     const lh = lHold ?? { x: 320, y: 520 };
     const rh = rHold ?? { x: 620, y: 520 };
 
-    const cx = (lh.x + rh.x) / 2;
-    const cy = (lh.y + rh.y) / 2;
+    const LERP = 0.12;
 
-    const shoulderY  = cy + 55;
-    const hipY       = shoulderY + this.TORSO;
+    if (!this.smoothL) this.smoothL = { x: lh.x, y: lh.y };
+    if (!this.smoothR) this.smoothR = { x: rh.x, y: rh.y };
+    this.smoothL.x += (lh.x - this.smoothL.x) * LERP;
+    this.smoothL.y += (lh.y - this.smoothL.y) * LERP;
+    this.smoothR.x += (rh.x - this.smoothR.x) * LERP;
+    this.smoothR.y += (rh.y - this.smoothR.y) * LERP;
 
-    const lShoulder = { x: cx - this.SW / 2, y: shoulderY };
-    const rShoulder = { x: cx + this.SW / 2, y: shoulderY };
-    const lHip      = { x: cx - this.HW / 2, y: hipY };
-    const rHip      = { x: cx + this.HW / 2, y: hipY };
-    const neck      = { x: cx, y: shoulderY };
-    const pelvis    = { x: cx, y: hipY };
-    const head      = { x: cx, y: shoulderY - this.HEAD_R - 6 };
+    const lh_s = this.smoothL;
+    const rh_s = this.smoothR;
+
+    const cx = (lh_s.x + rh_s.x) / 2;
+    const cy = (lh_s.y + rh_s.y) / 2;
+
+    const shoulderY = cy + 55;
+    const hipY      = shoulderY + this.TORSO;
+
+    // 몸통 기울기: 양손 높이 차에 따라 어깨 Y 오프셋
+    const handYDiff  = lh_s.y - rh_s.y;
+    const tiltOffset = handYDiff * 0.15;
+    const lShoulder  = { x: cx - this.SW / 2, y: shoulderY + tiltOffset };
+    const rShoulder  = { x: cx + this.SW / 2, y: shoulderY - tiltOffset };
+
+    const lHip   = { x: cx - this.HW / 2, y: hipY };
+    const rHip   = { x: cx + this.HW / 2, y: hipY };
+    const neck   = { x: cx, y: shoulderY };
+    const pelvis = { x: cx, y: hipY };
+    const head   = { x: cx, y: shoulderY - this.HEAD_R - 6 };
 
     // ── 팔 클램핑 ──────────────────────────────────────────
-    const ARM_MAX = this.UA + this.FA;   // 175px
-    const lHandClamped = clampTarget(lShoulder, lh, ARM_MAX);
-    const rHandClamped = clampTarget(rShoulder, rh, ARM_MAX);
+    const ARM_MAX      = this.UA + this.FA;
+    const lHandClamped = clampTarget(lShoulder, lh_s, ARM_MAX);
+    const rHandClamped = clampTarget(rShoulder, rh_s, ARM_MAX);
 
-    const lArmDist = Math.hypot(lh.x - lShoulder.x, lh.y - lShoulder.y);
-    const rArmDist = Math.hypot(rh.x - rShoulder.x, rh.y - rShoulder.y);
+    const lArmDist = Math.hypot(lh_s.x - lShoulder.x, lh_s.y - lShoulder.y);
+    const rArmDist = Math.hypot(rh_s.x - rShoulder.x, rh_s.y - rShoulder.y);
 
     const lElbow = ik2(lShoulder, lHandClamped, this.UA, this.FA, -1);
     const rElbow = ik2(rShoulder, rHandClamped, this.UA, this.FA,  1);
 
-    // ── 다리 클램핑 ────────────────────────────────────────
-    const LEG_MAX = this.TH + this.SH;   // 183px
-    const lFootRaw = footHolds[0] ?? { x: lHip.x - 12, y: hipY + this.TH + this.SH };
-    const rFootRaw = footHolds[1] ?? { x: rHip.x + 12, y: hipY + this.TH + this.SH };
+    // ── 다리 lerp ──────────────────────────────────────────
+    const LEG_MAX    = this.TH + this.SH;
+    const lFootTarget = footHolds[0] ?? { x: lHip.x - 12, y: hipY + LEG_MAX };
+    const rFootTarget = footHolds[1] ?? { x: rHip.x + 12, y: hipY + LEG_MAX };
 
-    const lFootClamped = clampTarget(lHip, lFootRaw, LEG_MAX);
-    const rFootClamped = clampTarget(rHip, rFootRaw, LEG_MAX);
+    const FOOT_LERP = 0.08;
+    if (!this.smoothLFoot) this.smoothLFoot = { x: lHip.x, y: hipY + LEG_MAX };
+    if (!this.smoothRFoot) this.smoothRFoot = { x: rHip.x, y: hipY + LEG_MAX };
+    this.smoothLFoot.x += (lFootTarget.x - this.smoothLFoot.x) * FOOT_LERP;
+    this.smoothLFoot.y += (lFootTarget.y - this.smoothLFoot.y) * FOOT_LERP;
+    this.smoothRFoot.x += (rFootTarget.x - this.smoothRFoot.x) * FOOT_LERP;
+    this.smoothRFoot.y += (rFootTarget.y - this.smoothRFoot.y) * FOOT_LERP;
 
-    const lLegDist = Math.hypot(lFootRaw.x - lHip.x, lFootRaw.y - lHip.y);
-    const rLegDist = Math.hypot(rFootRaw.x - rHip.x, rFootRaw.y - rHip.y);
+    const lFootClamped = clampTarget(lHip, this.smoothLFoot, LEG_MAX);
+    const rFootClamped = clampTarget(rHip, this.smoothRFoot, LEG_MAX);
+
+    const lLegDist = Math.hypot(lFootTarget.x - lHip.x, lFootTarget.y - lHip.y);
+    const rLegDist = Math.hypot(rFootTarget.x - rHip.x, rFootTarget.y - rHip.y);
 
     const lKnee = ik2(lHip, lFootClamped, this.TH, this.SH,  1);
     const rKnee = ik2(rHip, rFootClamped, this.TH, this.SH, -1);
@@ -96,7 +125,6 @@ export class Character {
       lKnee,  rKnee,
       lFoot:  lFootClamped,
       rFoot:  rFootClamped,
-      // 스트레치 여부 (renderer에서 색상 변환용)
       lArmStretched: lArmDist > ARM_MAX * 0.9,
       rArmStretched: rArmDist > ARM_MAX * 0.9,
       lLegStretched: lLegDist > LEG_MAX * 0.9,
