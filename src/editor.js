@@ -569,11 +569,12 @@ renderSidebar();
 function drawGrid() {
   ctx.save();
   ctx.strokeStyle = "rgba(255,255,255,0.03)";
-  ctx.lineWidth   = 1;
-  for (let x = 0; x < canvas.width;  x += 80) {
+  ctx.lineWidth = 1;
+  for (let x = 0; x < canvas.width; x += 80) {
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
   }
-  for (let y = 0; y < canvas.height; y += 80) {
+  const offsetY = wrap.scrollTop % 80;
+  for (let y = -offsetY; y < wrap.clientHeight; y += 80) {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
   }
   ctx.restore();
