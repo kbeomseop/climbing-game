@@ -21,13 +21,13 @@ export class PhysicsEngine {
     this._fallTimer = null
   }
 
-  init(cx, cy) {
+  init(cx, cy, matY) {
     World.clear(this.world)
     Engine.clear(this.engine)
     this.joints = []
     this.grips  = {}
 
-    const opt = { frictionAir: 0.15, friction: 0.5, restitution: 0.0, collisionFilter: { mask: 0 } }
+    const opt = { frictionAir: 0.15, friction: 0.5, restitution: 0.0, collisionFilter: { category: 0x0001, mask: 0x0002 } }
     const B = (x, y, w, h, label) => Bodies.rectangle(x, y, w, h, { ...opt, label })
 
     const torso  = B(cx, cy, SW + 10, TORSO, 'torso')
@@ -40,7 +40,15 @@ export class PhysicsEngine {
     const shinL  = B(cx - HW/2, cy + TORSO/2 + TH + SH/2, 8, SH, 'shinL')
     const shinR  = B(cx + HW/2, cy + TORSO/2 + TH + SH/2, 8, SH, 'shinR')
 
-    this.bodies = { torso, uArmL, uArmR, fArmL, fArmR, thighL, thighR, shinL, shinR }
+    const ground = Bodies.rectangle(cx, matY + 25, 10000, 50, {
+      isStatic: true,
+      label: 'ground',
+      friction: 0.8,
+      restitution: 0.0,
+      collisionFilter: { category: 0x0002, mask: 0x0001 },
+    })
+
+    this.bodies = { torso, uArmL, uArmR, fArmL, fArmR, thighL, thighR, shinL, shinR, ground }
     World.add(this.world, Object.values(this.bodies))
 
     const J = (bA, pA, bB, pB) => Constraint.create({
@@ -139,10 +147,10 @@ export class PhysicsEngine {
     return Math.abs(v.y) > 5
   }
 
-  reset(cx, cy) {
+  reset(cx, cy, matY) {
     if (this._fallTimer) { clearTimeout(this._fallTimer); this._fallTimer = null }
     this.release('left')
     this.release('right')
-    this.init(cx, cy)
+    this.init(cx, cy, matY)
   }
 }

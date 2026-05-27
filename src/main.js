@@ -172,7 +172,7 @@ function buildHolds() {
 
   const initCX = canvas.width / 2;
   const initCY = getMatY() - 300;
-  physicsEngine.init(initCX, initCY);
+  physicsEngine.init(initCX, initCY, getMatY());
 }
 
 async function initWebcam() {
@@ -322,7 +322,7 @@ function loop(timestamp) {
     physicsEngine._fallTimer = setTimeout(() => {
       climbingState.leftHold  = null;
       climbingState.rightHold = null;
-      physicsEngine.reset(standCX, getMatY() - 300);
+      physicsEngine.reset(standCX, getMatY() - 300, getMatY());
       targetScrollY = Math.max(0, getMatY() - canvas.height * 0.85);
     }, 2000);
   }
