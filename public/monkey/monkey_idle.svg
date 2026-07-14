@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-90 20 180 240" width="180" height="240">
+  <!-- 꼬리 -->
+  <path d="M18,145 Q55,165 58,200 Q60,225 42,230" fill="none" stroke="#b07040" stroke-width="8" stroke-linecap="round"/>
+  <!-- 다리 -->
+  <line x1="-8" y1="148" x2="-18" y2="188" stroke="#b07040" stroke-width="10" stroke-linecap="round"/>
+  <line x1="-18" y1="188" x2="-14" y2="224" stroke="#b07040" stroke-width="9" stroke-linecap="round"/>
+  <line x1="8" y1="148" x2="18" y2="188" stroke="#b07040" stroke-width="10" stroke-linecap="round"/>
+  <line x1="18" y1="188" x2="14" y2="224" stroke="#b07040" stroke-width="9" stroke-linecap="round"/>
+  <!-- 발 -->
+  <ellipse cx="-14" cy="228" rx="12" ry="7" fill="#b07040"/>
+  <circle cx="-22" cy="223" r="4" fill="#b07040"/>
+  <circle cx="-14" cy="221" r="4" fill="#b07040"/>
+  <circle cx="-6" cy="223" r="3.5" fill="#b07040"/>
+  <ellipse cx="14" cy="228" rx="12" ry="7" fill="#b07040"/>
+  <circle cx="6" cy="223" r="4" fill="#b07040"/>
+  <circle cx="14" cy="221" r="4" fill="#b07040"/>
+  <circle cx="22" cy="223" r="3.5" fill="#b07040"/>
+  <!-- 몸통 -->
+  <ellipse cx="0" cy="112" rx="22" ry="28" fill="#c8855a"/>
+  <ellipse cx="0" cy="118" rx="13" ry="18" fill="#e8b48a"/>
+  <!-- 팔 (편안하게 내려진) -->
+  <line x1="-18" y1="92" x2="-48" y2="118" stroke="#c8855a" stroke-width="9" stroke-linecap="round"/>
+  <line x1="-48" y1="118" x2="-52" y2="148" stroke="#c8855a" stroke-width="8" stroke-linecap="round"/>
+  <line x1="18" y1="92" x2="48" y2="118" stroke="#c8855a" stroke-width="9" stroke-linecap="round"/>
+  <line x1="48" y1="118" x2="52" y2="148" stroke="#c8855a" stroke-width="8" stroke-linecap="round"/>
+  <!-- 손 -->
+  <circle cx="-52" cy="150" r="9" fill="#c8855a"/>
+  <circle cx="-60" cy="145" r="5" fill="#e8b48a"/>
+  <circle cx="-52" cy="141" r="5" fill="#e8b48a"/>
+  <circle cx="-44" cy="143" r="4.5" fill="#e8b48a"/>
+  <circle cx="52" cy="150" r="9" fill="#c8855a"/>
+  <circle cx="60" cy="145" r="5" fill="#e8b48a"/>
+  <circle cx="52" cy="141" r="5" fill="#e8b48a"/>
+  <circle cx="44" cy="143" r="4.5" fill="#e8b48a"/>
+  <!-- 관절 -->
+  <circle cx="-48" cy="118" r="5" fill="#d4956a"/>
+  <circle cx="48" cy="118" r="5" fill="#d4956a"/>
+  <circle cx="-18" cy="188" r="5" fill="#9a6035"/>
+  <circle cx="18" cy="188" r="5" fill="#9a6035"/>
+  <!-- 목 -->
+  <rect x="-8" y="82" width="16" height="14" rx="6" fill="#c8855a"/>
+  <!-- 귀 -->
+  <circle cx="-24" cy="62" r="10" fill="#c8855a"/>
+  <circle cx="-24" cy="62" r="6" fill="#e8b48a"/>
+  <circle cx="24" cy="62" r="10" fill="#c8855a"/>
+  <circle cx="24" cy="62" r="6" fill="#e8b48a"/>
+  <!-- 머리 -->
+  <circle cx="0" cy="60" r="30" fill="#c8855a"/>
+  <!-- 주둥이 -->
+  <ellipse cx="0" cy="72" rx="16" ry="12" fill="#e8b48a"/>
+  <!-- 눈 흰자 -->
+  <circle cx="-10" cy="54" r="6" fill="#fff"/>
+  <circle cx="10" cy="54" r="6" fill="#fff"/>
+  <!-- 눈동자 -->
+  <circle cx="-9" cy="55" r="3.5" fill="#2a1a0a"/>
+  <circle cx="11" cy="55" r="3.5" fill="#2a1a0a"/>
+  <!-- 하이라이트 -->
+  <circle cx="-7" cy="52" r="1.5" fill="#fff"/>
+  <circle cx="13" cy="52" r="1.5" fill="#fff"/>
+  <!-- 코 -->
+  <ellipse cx="0" cy="66" rx="4" ry="3" fill="#a06040"/>
+  <circle cx="-2" cy="66" r="1.5" fill="#7a4030"/>
+  <circle cx="2" cy="66" r="1.5" fill="#7a4030"/>
+  <!-- 웃는 입 -->
+  <path d="M -7 72 Q 0 79 7 72" fill="none" stroke="#7a4030" stroke-width="2" stroke-linecap="round"/>
+</svg>
