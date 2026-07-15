@@ -3,11 +3,6 @@ export class Physics {
     this.maxReach         = 320
     this.snapRadius       = 55
     this.balanceTolerance = 0.42
-    this.fallState        = null  // null | 'hanging' | 'falling'
-    this.fallTimer        = 0
-    this.fallX            = 0
-    this.fallY            = 0
-    this.fallVY           = 0
   }
 
   canReach(currentHold, targetHold) {
@@ -33,43 +28,5 @@ export class Physics {
     return { stable: deviation <= tol, centerX: cx, baseX, deviation }
   }
 
-  triggerFall(pose) {
-    if (this.fallState) return
-    this.fallState = 'hanging'
-    this.fallTimer = 0
-    this.fallX     = pose.head.x
-    this.fallY     = pose.head.y
-    this.fallVY    = 0
-  }
-
-  updateFall(dt) {
-    if (!this.fallState) return null
-    this.fallTimer += dt
-
-    if (this.fallState === 'hanging') {
-      const swing = Math.sin(this.fallTimer * 8) * 14 * (1 - this.fallTimer / 0.6)
-      if (this.fallTimer >= 0.6) {
-        this.fallState = 'falling'
-        this.fallVY    = 0
-      }
-      return { done: false, x: this.fallX + swing, y: this.fallY, alpha: 1 }
-    }
-
-    if (this.fallState === 'falling') {
-      this.fallVY    += 980 * dt
-      this.fallY     += this.fallVY * dt
-      const alpha     = Math.max(0, 1 - (this.fallTimer - 0.6) / 0.8)
-      if (alpha <= 0) {
-        this.fallState = null
-        return { done: true, x: this.fallX, y: this.fallY, alpha: 0 }
-      }
-      return { done: false, x: this.fallX, y: this.fallY, alpha }
-    }
-  }
-
-  reset() {
-    this.fallState = null
-    this.fallTimer = 0
-    this.fallVY    = 0
-  }
+  reset() {}
 }

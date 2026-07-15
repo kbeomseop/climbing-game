@@ -1,18 +1,16 @@
 import { HandTracker } from "./handTracker.js";
 import { createHolds, ClimbingState } from "./climbing.js";
-import { Character } from "./character.js";
 import { Renderer } from "./renderer.js";
 import { Physics } from "./physics.js";
-import { Ragdoll } from "./ragdoll.js";
+import { VerletBody } from "./verletBody.js";
 
 const video  = document.getElementById("webcam");
 const canvas = document.getElementById("canvas");
 
-const tracker   = new HandTracker();
-const renderer  = new Renderer(canvas);
-const character = new Character();
-const physics   = new Physics();
-const ragdoll   = new Ragdoll();
+const tracker  = new HandTracker();
+const renderer = new Renderer(canvas);
+const physics  = new Physics();
+const body     = new VerletBody();
 
 let holds         = [];
 let climbingState = null;
@@ -174,6 +172,8 @@ function buildHolds() {
   const matY    = getMatY();
   scrollY       = Math.max(0, matY - canvas.height * 0.75);
   targetScrollY = scrollY;
+
+  body.init(canvas.width / 2, matY);
 }
 
 async function initWebcam() {
@@ -268,6 +268,14 @@ canvas.addEventListener("click", e => {
   }
 });
 
+// ── 추락 후 리셋 ─────────────────────────────────────────
+function resetAfterFall() {
+  climbingState.leftHold  = null;
+  climbingState.rightHold = null;
+  targetScrollY   = Math.max(0, getMatY() - canvas.height * 0.85);
+  balanceCooldown = 2.0;
+}
+
 // ── 렌더 루프 ────────────────────────────────────────────
 function loop(timestamp) {
   requestAnimationFrame(loop);
@@ -285,63 +293,65 @@ function loop(timestamp) {
 
   // ── hands 수집 ──
   let hands = [];
-  if (!physics.fallState) {
-    if (!mouseMode) {
-      tracker.detect(video);
-      hands = tracker.getHands(canvas.width, canvas.height);
-      climbingState.update(hands, canvas.width, physics, scrollY);
-    }
+  if (!mouseMode) {
+    tracker.detect(video);
+    hands = tracker.getHands(canvas.width, canvas.height);
+    climbingState.update(hands, canvas.width, physics, scrollY);
   }
 
   const lh = climbingState.leftHold;
   const rh = climbingState.rightHold;
 
-  // ── 유효 손 위치 (월드 좌표) ──
-  const MAT_Y      = getMatY();           // 월드 맨 아래 고정 매트 위치
-  const standHandY = MAT_Y - 358;
-  const standCX    = startHolds.length > 0
-    ? (startHolds[0].x + (startHolds[1]?.x ?? startHolds[0].x)) / 2
-    : canvas.width / 2;
-  const effL = lh ?? (mouseMode && leftPos
-    ? leftPos
-    : { x: standCX - 55, y: standHandY });
-  const effR = rh ?? (mouseMode && rightPos
-    ? rightPos
-    : { x: standCX + 55, y: standHandY });
+  // ── 손 pin/유도 ──
+  if (lh) body.pin('lHand', lh.x, lh.y); else body.unpin('lHand');
+  if (rh) body.pin('rHand', rh.x, rh.y); else body.unpin('rHand');
 
-  const hipPos = {
-    x: (effL.x + effR.x) / 2,
-    y: (effL.y + effR.y) / 2 + 55 + 120,
-  };
-  const footHolds = climbingState.getFootHolds(hipPos, MAT_Y);
-  const pose      = character.compute(effL, effR, footHolds);
+  // ── 자유 손은 트래킹/마우스 위치로 부드럽게 유도 ──
+  const half         = canvas.width / 2;
+  const trackedLeft  = hands.find(h => h.palmCenter.x < half);
+  const trackedRight = hands.find(h => h.palmCenter.x >= half);
 
-  // ── 물리: 균형 체크 → 낙하 트리거 ──
-  if (balanceCooldown > 0) balanceCooldown -= dt;
-  if (pose && !physics.fallState && (lh || rh) && balanceCooldown <= 0) {
-    const balance = physics.checkBalance(pose, lh, rh);
-    if (!balance.stable) {
-      physics.triggerFall(pose);
-      ragdoll.activate(pose, getMatY());
-      ragdoll.onLand = () => {
-        physics.reset();
-        ragdoll.deactivate();
-        climbingState.leftHold  = null;
-        climbingState.rightHold = null;
-        character.smoothL     = null;
-        character.smoothR     = null;
-        character.smoothLFoot = null;
-        character.smoothRFoot = null;
-        targetScrollY   = Math.max(0, getMatY() - canvas.height * 0.85);
-        balanceCooldown = 2.0;
-      };
-      balanceCooldown = 2.0;
-    }
+  if (!lh) {
+    const t = mouseMode ? leftPos : (trackedLeft
+      ? { x: trackedLeft.palmCenter.x, y: trackedLeft.palmCenter.y + scrollY }
+      : null);
+    if (t) body.attract('lHand', t.x, t.y, 0.22);
+  }
+  if (!rh) {
+    const t = mouseMode ? rightPos : (trackedRight
+      ? { x: trackedRight.palmCenter.x, y: trackedRight.palmCenter.y + scrollY }
+      : null);
+    if (t) body.attract('rHand', t.x, t.y, 0.22);
   }
 
-  // ── 낙하 업데이트 ──
-  const fallData = physics.updateFall(dt);
-  ragdoll.update(dt);
+  // ── 발: 홀드에 소프트 유도 (선택), 없으면 물리에 맡김 ──
+  const pelvisApprox = body.getPose().pelvis;
+  const footHolds     = climbingState.getFootHolds(pelvisApprox, getMatY());
+  if (footHolds[0]) body.attract('lFoot', footHolds[0].x, footHolds[0].y, 0.08);
+  if (footHolds[1]) body.attract('rFoot', footHolds[1].x, footHolds[1].y, 0.08);
+
+  // ── 추락 트리거: reachFail 또는 균형 붕괴 → 양손 놓기. 그게 전부. ──
+  if (balanceCooldown > 0) balanceCooldown -= dt;
+  const posePre = body.getPose();
+  let fallNow = false;
+  if (climbingState.reachFail && balanceCooldown <= 0) {
+    console.log('[FALL] reach fail');
+    fallNow = true;
+  }
+  climbingState.reachFail = null;
+  if (!fallNow && (lh || rh) && balanceCooldown <= 0) {
+    const balance = physics.checkBalance(posePre, lh, rh);
+    if (!balance.stable) { console.log('[FALL] balance'); fallNow = true; }
+  }
+  if (fallNow) {
+    body.unpinAll();
+    resetAfterFall();
+  }
+
+  // ── 물리 스텝 + pose ──
+  body.update(dt);
+  const pose    = body.getPose();
+  const falling = !(lh || rh) && !body.isOnGround();
 
   // ── 카메라 팔로우 ──
   const effectiveMode = scrollOverride ?? scrollMode;
@@ -349,7 +359,7 @@ function loop(timestamp) {
     scrollY = 0;
     targetScrollY = 0;
   } else if (effectiveMode === "follow") {
-    const charY = (ragdollPose ?? pose)?.neck?.y ?? 0;
+    const charY = pose.neck.y;
     targetScrollY = charY - window.innerHeight * 0.35;
     const minScroll = Math.max(0, getMatY() - canvas.height * 0.85);
     targetScrollY = Math.max(minScroll, Math.max(0, targetScrollY));
@@ -376,12 +386,9 @@ function loop(timestamp) {
     }
   }
 
-  const ragdollPose = ragdoll.getPose();
-  const renderPose  = ragdollPose ?? pose;
-
   renderer.drawFloor(scrollY, WORLD_H);
   renderer.drawHolds(holds, lh, rh, hoverHold, scrollY);
-  renderer.drawCharacter(renderPose, scrollY, ragdollPose ? { alpha:1, x:0, y:0 } : fallData, lh, rh);
+  renderer.drawCharacter(pose, scrollY, null, lh, rh);
   if (hands.length > 0) renderer.drawHandLandmarks(hands, scrollY);
   renderer.drawMouseCursors({ mouseMode, mouse, activeKey, lastKey });
   renderer.drawUI({ ready, lHold: lh, rHold: rh, startHolds, noCam, mouseMode });
