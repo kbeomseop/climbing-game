@@ -6,7 +6,7 @@ export class VerletBody {
 
     this.gravity    = 1400;   // px/s^2
     this.damping    = 0.98;   // 감쇠 (출렁임 조절: 낮을수록 절제됨)
-    this.iterations = 8;      // 제약 반복 (높을수록 단단함)
+    this.iterations = 20;     // 제약 반복 (높을수록 단단함)
 
     this.points = {};   // { name: {x, y, px, py, pinned:{x,y}|null} }
     this.sticks = [];   // { a, b, len }
@@ -19,7 +19,7 @@ export class VerletBody {
     this.groundY = matY;
     const P = (name, x, y) => { this.points[name] = { x, y, px: x, py: y, pinned: null }; };
 
-    const footY = matY - 5;
+    const footY = matY;
     const kneeY = footY - this.SH;
     const hipY  = kneeY - this.TH;
     const shY   = hipY - this.TORSO;
@@ -64,6 +64,15 @@ export class VerletBody {
     S('rHip','rKnee',  this.TH);
     S('rKnee','rFoot', this.SH);
 
+    // ── 소프트 스틱: 자세 붕괴 방지 (stiff = 복원 비율) ──
+    const soft = (a, b, len, stiff) => this.sticks.push({ a, b, len, stiff });
+    soft('lHip',      'lFoot', this.TH + this.SH,        0.15);
+    soft('rHip',      'rFoot', this.TH + this.SH,        0.15);
+    soft('lShoulder', 'lHand', (this.UA + this.FA) * 0.9, 0.05);
+    soft('rShoulder', 'rHand', (this.UA + this.FA) * 0.9, 0.05);
+    soft('lShoulder', 'lFoot', this.TORSO + this.TH + this.SH, 0.08);
+    soft('rShoulder', 'rFoot', this.TORSO + this.TH + this.SH, 0.08);
+
     this._built = true;
   }
 
@@ -101,7 +110,11 @@ export class VerletBody {
         const A = this.points[s.a], B = this.points[s.b];
         const dx = B.x - A.x, dy = B.y - A.y;
         const d  = Math.hypot(dx, dy) || 0.0001;
-        const diff = (d - s.len) / d;
+        let diff = (d - s.len) / d;
+        if (s.stiff !== undefined) {
+          if (d > s.len) continue;   // 소프트 스틱은 접힘만 복원 (늘어남은 관여 X)
+          diff *= s.stiff;
+        }
         const aw = A.pinned ? 0 : 0.5;
         const bw = B.pinned ? 0 : 0.5;
         const total = aw + bw || 1;
@@ -110,12 +123,13 @@ export class VerletBody {
         B.x -= dx * diff * (bw / total);
         B.y -= dy * diff * (bw / total);
       }
-      // 바닥 충돌 (매트)
+      // 바닥 충돌 (매트) — 발 우선 보정
       for (const p of Object.values(this.points)) {
         if (!p.pinned && p.y > this.groundY) {
           p.y = this.groundY;
-          // 마찰: 착지 시 수평 미끄러짐 감쇠
-          p.px = p.x - (p.x - p.px) * 0.5;
+          p.py = p.y - (p.x - p.px) * 0; // 수직속도 제거
+          p.py = this.groundY - (this.groundY - p.py) * 0.3; // 약한 반발 감쇠만 유지
+          p.px = p.x - (p.x - p.px) * 0.6; // 수평 마찰
         }
       }
     }
@@ -124,7 +138,7 @@ export class VerletBody {
   // ── 상태 조회 ────────────────────────────────────────────
   isOnGround() {
     const lf = this.points.lFoot, rf = this.points.rFoot;
-    const still = Math.abs(lf.y - lf.py) < 0.8 && Math.abs(rf.y - rf.py) < 0.8;
+    const still = Math.abs(lf.y - lf.py) < 1.5 && Math.abs(rf.y - rf.py) < 1.5;
     return still && lf.y >= this.groundY - 2 && rf.y >= this.groundY - 2;
   }
 

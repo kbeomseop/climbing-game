@@ -1,6 +1,7 @@
 export class Physics {
   constructor() {
     this.maxReach         = 320
+    this.maxSpan          = 380
     this.snapRadius       = 55
     this.balanceTolerance = 0.42
   }
@@ -9,6 +10,12 @@ export class Physics {
     if (!currentHold) return true
     const d = Math.hypot(targetHold.x - currentHold.x, targetHold.y - currentHold.y)
     return d <= this.maxReach
+  }
+
+  canSpan(otherHold, targetHold) {
+    if (!otherHold) return true
+    const d = Math.hypot(targetHold.x - otherHold.x, targetHold.y - otherHold.y)
+    return d <= this.maxSpan
   }
 
   checkBalance(pose, lHold, rHold) {

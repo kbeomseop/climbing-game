@@ -37,6 +37,7 @@ let rightPos  = null;
 // ── 타임스텝 ─────────────────────────────────────────────
 let lastTime        = null;
 let balanceCooldown = 0;
+let landTimer       = 0;
 
 // ── 현재 루트 ID ─────────────────────────────────────────
 let currentRouteId = null;
@@ -174,6 +175,12 @@ function buildHolds() {
   targetScrollY = scrollY;
 
   body.init(canvas.width / 2, matY);
+  console.log('[BODY INIT]', JSON.stringify({
+    torsoLen: Math.hypot(
+      body.points.lShoulder.x - body.points.lHip.x,
+      body.points.lShoulder.y - body.points.lHip.y
+    ).toFixed(1),
+  }));
 }
 
 async function initWebcam() {
@@ -263,8 +270,16 @@ canvas.addEventListener("click", e => {
     if (d < nd) { nearest = h; nd = d; }
   }
   if (nearest && nd < 70) {
-    if (isLeft) climbingState.leftHold  = nearest;
-    else        climbingState.rightHold = nearest;
+    const cur   = isLeft ? climbingState.leftHold  : climbingState.rightHold;
+    const other = isLeft ? climbingState.rightHold : climbingState.leftHold;
+    if (nearest !== cur &&
+        (!physics.canReach(cur, nearest) || !physics.canSpan(other, nearest))) {
+      climbingState.reachFail = { side: isLeft ? 'left' : 'right', hold: nearest };
+      console.log('[REACH FAIL] click', isLeft ? 'L' : 'R');
+    } else if (nearest !== cur) {
+      if (isLeft) climbingState.leftHold  = nearest;
+      else        climbingState.rightHold = nearest;
+    }
   }
 });
 
@@ -315,43 +330,58 @@ function loop(timestamp) {
     const t = mouseMode ? leftPos : (trackedLeft
       ? { x: trackedLeft.palmCenter.x, y: trackedLeft.palmCenter.y + scrollY }
       : null);
-    if (t) body.attract('lHand', t.x, t.y, 0.22);
+    if (t) body.attract('lHand', t.x, t.y, 0.35);
   }
   if (!rh) {
     const t = mouseMode ? rightPos : (trackedRight
       ? { x: trackedRight.palmCenter.x, y: trackedRight.palmCenter.y + scrollY }
       : null);
-    if (t) body.attract('rHand', t.x, t.y, 0.22);
+    if (t) body.attract('rHand', t.x, t.y, 0.35);
   }
 
   // ── 발: 홀드에 소프트 유도 (선택), 없으면 물리에 맡김 ──
   const pelvisApprox = body.getPose().pelvis;
   const footHolds     = climbingState.getFootHolds(pelvisApprox, getMatY());
-  if (footHolds[0]) body.attract('lFoot', footHolds[0].x, footHolds[0].y, 0.08);
-  if (footHolds[1]) body.attract('rFoot', footHolds[1].x, footHolds[1].y, 0.08);
+  if (footHolds[0]) body.attract('lFoot', footHolds[0].x, footHolds[0].y, 0.05);
+  if (footHolds[1]) body.attract('rFoot', footHolds[1].x, footHolds[1].y, 0.05);
 
-  // ── 추락 트리거: reachFail 또는 균형 붕괴 → 양손 놓기. 그게 전부. ──
+  // ── 추락 트리거: reachFail → 양손 놓기. 그게 전부. ──
   if (balanceCooldown > 0) balanceCooldown -= dt;
-  const posePre = body.getPose();
   let fallNow = false;
   if (climbingState.reachFail && balanceCooldown <= 0) {
     console.log('[FALL] reach fail');
     fallNow = true;
   }
   climbingState.reachFail = null;
-  if (!fallNow && (lh || rh) && balanceCooldown <= 0) {
-    const balance = physics.checkBalance(posePre, lh, rh);
-    if (!balance.stable) { console.log('[FALL] balance'); fallNow = true; }
-  }
   if (fallNow) {
     body.unpinAll();
     resetAfterFall();
   }
 
   // ── 물리 스텝 + pose ──
+  body.groundY = getMatY();
   body.update(dt);
   const pose    = body.getPose();
   const falling = !(lh || rh) && !body.isOnGround();
+
+  // ── 착지 후 널브러진 몸 일으켜 세우기 ──
+  if (!(lh || rh)) {
+    const bodyHeight = pose.lFoot.y - pose.head.y;
+    if (body.isOnGround() && bodyHeight < 250) {
+      landTimer += dt;
+      if (landTimer > 1.2) {
+        const standCX = startHolds.length > 0
+          ? (startHolds[0].x + (startHolds[1]?.x ?? startHolds[0].x)) / 2
+          : canvas.width / 2;
+        body.init(standCX, getMatY());
+        landTimer = 0;
+      }
+    } else {
+      landTimer = 0;
+    }
+  } else {
+    landTimer = 0;
+  }
 
   // ── 카메라 팔로우 ──
   const effectiveMode = scrollOverride ?? scrollMode;
@@ -392,6 +422,11 @@ function loop(timestamp) {
   if (hands.length > 0) renderer.drawHandLandmarks(hands, scrollY);
   renderer.drawMouseCursors({ mouseMode, mouse, activeKey, lastKey });
   renderer.drawUI({ ready, lHold: lh, rHold: rh, startHolds, noCam, mouseMode });
+
+  if (Math.floor(now/3000) !== Math.floor((now-16)/3000)) {
+    console.log('[ARM LEN]', 'L:', Math.hypot(pose.lHand.x-pose.lShoulder.x, pose.lHand.y-pose.lShoulder.y).toFixed(0),
+                'target:', (90+85));
+  }
 }
 
 requestAnimationFrame(loop);
